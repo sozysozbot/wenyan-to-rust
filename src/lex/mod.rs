@@ -182,7 +182,7 @@ pub enum Type {
 use peek_nth::IteratorExt;
 
 #[derive(Debug)]
-pub enum LexError {
+pub enum Error {
     UnexpectedCharAfter(char, char),
     UnexpectedEOFAfter(char),
     NonterminatedIdentifier,
@@ -190,7 +190,50 @@ pub enum LexError {
     NonterminatedStringLiteral,
 }
 
-pub fn lex(input: &str) -> Result<Vec<Lex>, LexError> {
+fn lex_ident_or_str_after_seeing_quote(
+    iter: &mut peek_nth::PeekableNth<std::str::Chars>,
+) -> Result<Lex, Error> {
+    let peek = iter.peek();
+    match peek {
+        None => return Err(Error::NonterminatedIdentifier),
+        Some('「') => {
+            iter.next(); /* parse string literal */
+            let mut strlit = String::new();
+            loop {
+                let next = iter.next();
+                match next {
+                    None => return Err(Error::NonterminatedStringLiteral),
+                    Some('」') => match iter.next() {
+                        None => return Err(Error::NonterminatedStringLiteral),
+                        Some('」') => break,
+                        Some(a) => return Err(Error::UnexpectedCharAfter('」', a)),
+                    },
+                    Some(a) => strlit.push(a),
+                }
+            }
+            return Ok(Lex::StringLiteral(strlit));
+        }
+        Some(_) => {
+            /* parse identifier */
+            let mut ident = String::new();
+            loop {
+                match iter.next() {
+                    None => return Err(Error::NonterminatedIdentifier),
+                    Some('」') => break,
+                    Some(a) => ident.push(a),
+                }
+            }
+
+            if ident.is_empty() {
+                return Err(Error::EmptyIdentifier);
+            }
+
+            return Ok(Lex::Identifier(ident));
+        }
+    }
+}
+
+pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
     let mut ans = vec![];
     let mut iter = input.chars().peekable_nth();
     loop {
@@ -212,64 +255,27 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, LexError> {
             '陰' => ans.push(Lex::BoolValue(BoolValue::Yin1)),
             '陽' => ans.push(Lex::BoolValue(BoolValue::Yang2)),
             '「' => {
-                let peek = iter.peek();
-                match peek {
-                    None => return Err(LexError::NonterminatedIdentifier),
-                    Some('「') => {
-                        iter.next(); /* parse string literal */
-                        let mut strlit = String::new();
-                        loop {
-                            let next = iter.next();
-                            match next {
-                                None => return Err(LexError::NonterminatedStringLiteral),
-                                Some('」') => match iter.next() {
-                                    None => return Err(LexError::NonterminatedStringLiteral),
-                                    Some('」') => break,
-                                    Some(a) => return Err(LexError::UnexpectedCharAfter('」', a)),
-                                },
-                                Some(a) => strlit.push(a),
-                            }
-                        }
-                        ans.push(Lex::StringLiteral(strlit));
-                    }
-                    Some(_) => {
-                        /* parse identifier */
-                        let mut ident = String::new();
-                        loop {
-                            match iter.next() {
-                                None => return Err(LexError::NonterminatedIdentifier),
-                                Some('」') => break,
-                                Some(a) => ident.push(a),
-                            }
-                        }
-
-                        if ident.is_empty() {
-                            return Err(LexError::EmptyIdentifier);
-                        }
-
-                        ans.push(Lex::Identifier(ident));
-                    }
-                }
+                ans.push(lex_ident_or_str_after_seeing_quote(&mut iter)?);
             }
             '吾' => {
                 let next = iter.next();
                 match next {
-                    None => return Err(LexError::UnexpectedEOFAfter('吾')),
+                    None => return Err(Error::UnexpectedEOFAfter('吾')),
                     Some('有') => ans.push(Lex::Wu2You3),
                     Some('嘗') => match iter.next() {
                         Some('觀') => ans.push(Lex::Wu2Chang2Guan1),
-                        None => return Err(LexError::UnexpectedEOFAfter('嘗')),
-                        Some(a) => return Err(LexError::UnexpectedCharAfter('嘗', a)),
+                        None => return Err(Error::UnexpectedEOFAfter('嘗')),
+                        Some(a) => return Err(Error::UnexpectedCharAfter('嘗', a)),
                     },
-                    Some(a) => return Err(LexError::UnexpectedCharAfter('吾', a)),
+                    Some(a) => return Err(Error::UnexpectedCharAfter('吾', a)),
                 }
             }
             '書' => {
                 let next = iter.next();
                 match next {
-                    None => return Err(LexError::UnexpectedEOFAfter('書')),
+                    None => return Err(Error::UnexpectedEOFAfter('書')),
                     Some('之') => ans.push(Lex::Shu1Zhi1),
-                    Some(a) => return Err(LexError::UnexpectedCharAfter('書', a)),
+                    Some(a) => return Err(Error::UnexpectedCharAfter('書', a)),
                 }
             }
             '今' => {
