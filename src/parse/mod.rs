@@ -94,6 +94,8 @@ fn parse_statement(
                     match iter.next() {
                         None => return Err(Error::UnexpectedEOF),
                         Some(lex::Lex::Type(t)) => {
+                            use std::convert::TryFrom;
+
                             let mut ans = vec![];
                             let vec = loop {
                                 if iter.peek() != Some(&&lex::Lex::Yue1) {
@@ -104,8 +106,12 @@ fn parse_statement(
                                 ans.push(data);
                             };
 
-                            let interpret = interpret_intnum(num);
-                            if interpret <= 0 {
+                            let interpret = match usize::try_from(interpret_intnum(num)) {
+                                Err(_) => return Err(Error::InvalidVariableCount),
+                                Ok(a) => a
+                            };
+
+                            if interpret == 0 {
                                 return Err(Error::InvalidVariableCount);
                             }
 
