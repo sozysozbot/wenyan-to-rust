@@ -21,13 +21,13 @@ pub enum Statement {
 
 #[derive(Debug)]
 pub struct DeclareStatement {
-    int_num: i64,
-    type_: lex::Type,
-    data_arr: Vec<Data>,
+    pub int_num: usize,
+    pub type_: lex::Type,
+    pub data_arr: Vec<Data>,
 }
 
-#[derive(Debug)]
-enum Data {
+#[derive(Debug, Clone)]
+pub enum Data {
     StringLiteral(String),
     BoolValue(bool),
     Identifier(String),
@@ -39,6 +39,7 @@ enum Data {
 pub enum Error {
     UnresolvableTokens,
     UnexpectedEOF,
+    InvalidVariableCount,
 }
 
 fn interpret_intnum(num: &lex::IntNum) -> i64 {
@@ -103,8 +104,13 @@ fn parse_statement(
                                 ans.push(data);
                             };
 
+                            let interpret = interpret_intnum(num);
+                            if interpret <= 0 {
+                                return Err(Error::InvalidVariableCount);
+                            }
+
                             return Ok(Statement::Declare(DeclareStatement {
-                                int_num: interpret_intnum(num),
+                                int_num: interpret as usize,
                                 type_: *t,
                                 data_arr: vec,
                             }));
