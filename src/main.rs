@@ -45,6 +45,8 @@ mod tests {
     }
 }
 
+use std::include_str;
+use std::collections::HashMap;
 fn main() -> std::io::Result<()> {
     let matches = App::new("wenyan-to-rust")
         .version("0.1.0")
@@ -73,6 +75,10 @@ fn main() -> std::io::Result<()> {
         .get_matches();
 
     let config = matches.value_of("config").unwrap_or("default.conf");
+
+    let pinyin_json = include_str!("hanzi2roman-map-pinyin.json");
+    let conversion_table: HashMap<String, String> =  serde_json::from_str(pinyin_json)?;
+
     let verbose_level = matches.occurrences_of("v");
 
     let mut file = File::open(matches.value_of("INPUT").unwrap())?;
@@ -99,7 +105,7 @@ fn main() -> std::io::Result<()> {
             println!("----------------------");
         }
         if let Ok(parsed) = parsed {
-            let compiled = compile::compile(&parsed);
+            let compiled = compile::compile(&parsed, &conversion_table);
             if verbose_level > 0 {
                 println!("\ncompiler output: \n----------------------");
             }

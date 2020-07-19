@@ -68,7 +68,7 @@ fn compile_statement(env: &mut Env, st: &parse::Statement) -> String {
                 anon_counter: env.anon_counter,
 
                 /// shu1zhi1_reference must be inherited, since in the original compiler
-                /// 
+                ///
                 /// ```
                 /// 吾有二言。曰「「天地。」」。
                 /// 為是三遍。
@@ -76,9 +76,9 @@ fn compile_statement(env: &mut Env, st: &parse::Statement) -> String {
                 /// 吾有一言。曰「「問天地好在。」」。書之。
                 /// 云云。
                 /// ```
-                /// 
-                /// is translated into 
-                /// 
+                ///
+                /// is translated into
+                ///
                 /// ```
                 /// var _ans1 = "天地。";
                 /// var _ans2 = "";
@@ -105,8 +105,8 @@ fn compile_statement(env: &mut Env, st: &parse::Statement) -> String {
 
     ans
 }
-
-pub fn compile(parsed: &Vec<parse::Statement>) -> String {
+use std::collections::HashMap;
+pub fn compile(parsed: &Vec<parse::Statement>, conversion_table: &HashMap<String, String>) -> String {
     let mut ans = "fn main() {\n".to_string();
     let mut env = Env {
         anon_counter: 0,
