@@ -66,13 +66,35 @@ fn compile_statement(env: &mut Env, st: &parse::Statement) -> String {
             let mut new_env = Env {
                 indent_level: env.indent_level + 1,
                 anon_counter: env.anon_counter,
-                shu1zhi1_reference: vec![],
+
+                /// shu1zhi1_reference must be inherited, since in the original compiler
+                /// 
+                /// ```
+                /// 吾有二言。曰「「天地。」」。
+                /// 為是三遍。
+                /// 書之。
+                /// 吾有一言。曰「「問天地好在。」」。書之。
+                /// 云云。
+                /// ```
+                /// 
+                /// is translated into 
+                /// 
+                /// ```
+                /// var _ans1 = "天地。";
+                /// var _ans2 = "";
+                /// for (let _rand1 = 0; _rand1 < 3; _rand1++) {
+                ///   console.log(_ans1, _ans2);
+                ///   var _ans3 = "問天地好在。";
+                ///   console.log(_ans3);
+                /// };
+                /// ```
+                shu1zhi1_reference: env.shu1zhi1_reference.clone(),
             };
             for st in statements {
                 inner.push_str(&compile_statement(&mut new_env, &st));
             }
             ans = format!(
-                "{}for _ in 0..{} {{\n{}\n{}}}\n",
+                "{}for _ in 0..{} {{\n{}{}}}\n",
                 "    ".repeat(env.indent_level),
                 num,
                 inner,
