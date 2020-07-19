@@ -23,7 +23,7 @@ pub enum Lex {
 }
 
 #[derive(Eq, PartialEq, Debug, Clone)]
-pub struct IntNum(Vec<IntNumKeywords>);
+pub struct IntNum(pub Vec<IntNumKeywords>);
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub enum FloatNumKeywords {
@@ -73,7 +73,7 @@ impl FloatNumKeywords {
 }
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
-enum IntNumKeywords {
+pub enum IntNumKeywords {
     /// 零
     Ling2,
     /// 一
@@ -167,6 +167,15 @@ pub enum BoolValue {
     Yang2,
 }
 
+impl BoolValue {
+    pub fn interpret(self) -> bool {
+        match self {
+            BoolValue::Yin1 => false,
+            BoolValue::Yang2 => true,
+        }
+    }
+}
+
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub enum Type {
     /// 數
@@ -181,7 +190,7 @@ pub enum Type {
 
 use peek_nth::IteratorExt;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Error {
     UnexpectedCharAfter(char, char),
     UnexpectedEOFAfter(char),
