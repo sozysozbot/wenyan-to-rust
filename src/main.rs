@@ -5,6 +5,36 @@ mod lex;
 mod parse;
 mod compile;
 
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+    use std::fs::File;
+    fn test(s: &str) {
+        let mut file = File::open(format!("{}.wy", s)).unwrap();
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).unwrap();
+        let lex = lex::lex(&contents).unwrap();
+        let parsed = parse::parse(&lex).unwrap();
+        let compiled = compile::compile(&parsed);
+
+        let mut file2 = File::open(format!("{}.rs", s)).unwrap();
+        let mut contents2 = String::new();
+        file2.read_to_string(&mut contents2).unwrap();
+
+        assert_eq!(compiled, contents2)
+    }
+
+    #[test]
+    fn test000() {
+        test("test000")
+    }
+
+    #[test]
+    fn test001() {
+        test("test001")
+    }
+}
 
 fn main() -> std::io::Result<()> {
     let mut file = File::open("test000.wy")?;
