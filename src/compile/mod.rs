@@ -3,7 +3,7 @@ use crate::parse;
 struct Env {
     anon_counter: usize,
     indent_level: usize,
-    shu1zhi1_reference: Vec<String>
+    shu1zhi1_reference: Vec<String>,
 }
 
 fn compile_literal(lit: Option<&parse::Data>, default_type: lex::Type) -> String {
@@ -59,7 +59,7 @@ fn compile_statement(env: &mut Env, st: &parse::Statement) -> String {
 
             ans.push_str(");\n");
             env.shu1zhi1_reference = vec![];
-        } 
+        }
     }
 
     ans
@@ -70,7 +70,7 @@ pub fn compile(parsed: &Vec<parse::Statement>) -> String {
     let mut env = Env {
         anon_counter: 0,
         indent_level: 1,
-        shu1zhi1_reference: vec![]
+        shu1zhi1_reference: vec![],
     };
 
     for st in parsed {

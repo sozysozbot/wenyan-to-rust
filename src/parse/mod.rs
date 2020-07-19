@@ -108,7 +108,7 @@ fn parse_statement(
 
                             let interpret = match usize::try_from(interpret_intnum(num)) {
                                 Err(_) => return Err(Error::InvalidVariableCount),
-                                Ok(a) => a
+                                Ok(a) => a,
                             };
 
                             if interpret == 0 {

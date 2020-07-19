@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 peek-nth = "0.2.0"
+clap = "2.33.1"
