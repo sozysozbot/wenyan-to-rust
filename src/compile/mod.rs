@@ -1,5 +1,6 @@
 use crate::lex;
 use crate::parse;
+#[derive(Clone)]
 struct Env {
     anon_counter: usize,
     indent_level: usize,
@@ -59,6 +60,24 @@ fn compile_statement(env: &mut Env, st: &parse::Statement) -> String {
 
             ans.push_str(");\n");
             env.shu1zhi1_reference = vec![];
+        }
+        parse::Statement::ForEnum { num, statements } => {
+            let mut inner = String::new();
+            let mut new_env = Env {
+                indent_level: env.indent_level + 1,
+                anon_counter: env.anon_counter,
+                shu1zhi1_reference: vec![],
+            };
+            for st in statements {
+                inner.push_str(&compile_statement(&mut new_env, &st));
+            }
+            ans = format!(
+                "{}for _ in 0..{} {{\n{}\n{}}}\n",
+                "    ".repeat(env.indent_level),
+                num,
+                inner,
+                "    ".repeat(env.indent_level),
+            );
         }
     }
 

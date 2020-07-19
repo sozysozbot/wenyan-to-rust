@@ -3,8 +3,11 @@ use crate::lex;
 pub enum Statement {
     Declare(DeclareStatement),
     Print,
+    ForEnum {
+        num: i64,
+        statements: Vec<Statement>,
+    },
     // Define,
-    // For,
     // Function,
     // If,
     // Return,
@@ -85,6 +88,33 @@ fn parse_statement(
     };
 
     match token {
+        lex::Lex::Wei2Shi4 => {
+            let next = iter.next();
+            match next {
+                None => return Err(Error::UnexpectedEOF),
+                Some(lex::Lex::IntNum(num)) => match iter.next() {
+                    None => return Err(Error::UnexpectedEOF),
+                    Some(lex::Lex::Bian4) => {
+                        let mut inner = vec![];
+                        loop {
+                            if iter.peek() == Some(&&lex::Lex::Yun2Yun2) {
+                                iter.next();
+                                break;
+                            }
+
+                            inner.push(parse_statement(&mut iter)?);
+                        }
+                        return Ok(Statement::ForEnum {
+                            num: interpret_intnum(num),
+                            statements: inner,
+                        });
+                    }
+                    _ => return Err(Error::UnresolvableTokens),
+                },
+                Some(lex::Lex::Identifier(_)) => unimplemented!("looping with an identifier"),
+                _ => return Err(Error::UnresolvableTokens),
+            }
+        }
         lex::Lex::Shu1Zhi1 => return Ok(Statement::Print),
         lex::Lex::Jin1You3 | lex::Lex::Wu2You3 => {
             let next = iter.next();

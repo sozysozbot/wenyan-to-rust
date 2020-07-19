@@ -263,7 +263,8 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
             Some(d) => d,
         };
 
-        if c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '。' || c == '、' {
+        if c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '。' || c == '、' || c == '　'
+        {
             continue;
         }
 
@@ -348,7 +349,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
                     FloatNumKeywords::from_char(c).expect("Cannot happen"),
                 ))
             }
-            _ => unimplemented!(),
+            a => panic!("unrecognized character {}", a),
         }
     }
     Ok(ans)

@@ -35,6 +35,14 @@ mod tests {
     fn test001() {
         test("test001")
     }
+    #[test]
+    fn test002() {
+        test("test002")
+    }
+    #[test]
+    fn test003() {
+        test("test003")
+    }
 }
 
 fn main() -> std::io::Result<()> {
