@@ -13,6 +13,18 @@ pub enum Lex {
     /// 書之
     Shu1Zhi1,
 
+    /// 為是
+    Wei2Shi4,
+
+    /// 遍
+    Bian4,
+
+    /// 恆為是
+    Heng2Wei2Shi4,
+
+    /// 云云
+    Yun2Yun2,
+
     /// 吾嘗觀
     Wu2Chang2Guan1,
     StringLiteral(String),
@@ -261,6 +273,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
             '言' => ans.push(Lex::Type(Type::Yan2)),
             '爻' => ans.push(Lex::Type(Type::Yao2)),
             '曰' => ans.push(Lex::Yue1),
+            '遍' => ans.push(Lex::Bian4),
             '陰' => ans.push(Lex::BoolValue(BoolValue::Yin1)),
             '陽' => ans.push(Lex::BoolValue(BoolValue::Yang2)),
             '「' => {
@@ -277,6 +290,34 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
                         Some(a) => return Err(Error::UnexpectedCharAfter('嘗', a)),
                     },
                     Some(a) => return Err(Error::UnexpectedCharAfter('吾', a)),
+                }
+            }
+            '為' => {
+                let next = iter.next();
+                match next {
+                    None => return Err(Error::UnexpectedEOFAfter('為')),
+                    Some('是') => ans.push(Lex::Wei2Shi4),
+                    Some(a) => return Err(Error::UnexpectedCharAfter('為', a)),
+                }
+            }
+            '云' => {
+                let next = iter.next();
+                match next {
+                    None => return Err(Error::UnexpectedEOFAfter('云')),
+                    Some('云') => ans.push(Lex::Yun2Yun2),
+                    Some(a) => return Err(Error::UnexpectedCharAfter('云', a)),
+                }
+            }
+            '恆' => {
+                let next = iter.next();
+                match next {
+                    None => return Err(Error::UnexpectedEOFAfter('恆')),
+                    Some('為') => match iter.next() {
+                        Some('是') => ans.push(Lex::Heng2Wei2Shi4),
+                        None => return Err(Error::UnexpectedEOFAfter('為')),
+                        Some(a) => return Err(Error::UnexpectedCharAfter('為', a)),
+                    },
+                    Some(a) => return Err(Error::UnexpectedCharAfter('恆', a)),
                 }
             }
             '書' => {
@@ -300,22 +341,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
             '零' | '一' | '二' | '三' | '四' | '五' | '六' | '七' | '八' | '九' | '十' | '百'
             | '千' | '萬' | '億' | '兆' | '京' | '垓' | '秭' | '穣' | '溝' | '澗' | '正' | '載'
             | '極' => {
-                let mut vec = vec![];
-                vec.push(IntNumKeywords::from_char(c).expect("Cannot happen"));
-                loop {
-                    let k = iter.peek();
-                    let c2 = match k {
-                        None => break,
-                        Some(a) => *a,
-                    };
-                    let word = match IntNumKeywords::from_char(c2) {
-                        None => break,
-                        Some(key) => key,
-                    };
-                    vec.push(word);
-                    iter.next();
-                }
-                ans.push(Lex::IntNum(IntNum(vec)));
+                ans.push(lex_int_num(c, &mut iter)?);
             }
             '分' | '釐' | '毫' | '絲' | '忽' | '微' | '纖' | '沙' | '塵' | '埃' | '渺' | '漠' => {
                 ans.push(Lex::FloatNumKeywords(
@@ -326,4 +352,26 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
         }
     }
     Ok(ans)
+}
+
+fn lex_int_num(
+    initial_char: char,
+    iter: &mut peek_nth::PeekableNth<std::str::Chars>,
+) -> Result<Lex, Error> {
+    let mut vec = vec![];
+    vec.push(IntNumKeywords::from_char(initial_char).expect("Cannot happen"));
+    loop {
+        let k = iter.peek();
+        let c2 = match k {
+            None => break,
+            Some(a) => *a,
+        };
+        let word = match IntNumKeywords::from_char(c2) {
+            None => break,
+            Some(key) => key,
+        };
+        vec.push(word);
+        iter.next();
+    }
+    Ok(Lex::IntNum(IntNum(vec)))
 }
