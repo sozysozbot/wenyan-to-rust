@@ -11,13 +11,17 @@ mod parse;
 mod tests {
     use super::*;
     use std::fs::File;
+    use serde_json;
     fn test(s: &str) {
+        let pinyin_json = include_str!("hanzi2roman-map-pinyin.json");
+        let conversion_table: HashMap<String, String> =  serde_json::from_str(pinyin_json).unwrap();
+
         let mut file = File::open(format!("{}.wy", s)).unwrap();
         let mut contents = String::new();
         file.read_to_string(&mut contents).unwrap();
         let lex = lex::lex(&contents).unwrap();
         let parsed = parse::parse(&lex).unwrap();
-        let compiled = compile::compile(&parsed);
+        let compiled = compile::compile(&parsed, &conversion_table);
 
         let mut file2 = File::open(format!("{}.rs", s)).unwrap();
         let mut contents2 = String::new();
