@@ -25,6 +25,12 @@ pub enum Lex {
     /// 云云
     Yun2Yun2,
 
+    /// 有
+    You3,
+
+    /// 名之
+    Ming2Zhi1,
+
     /// 吾嘗觀
     Wu2Chang2Guan1,
     StringLiteral(String),
@@ -269,6 +275,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
         }
 
         match c {
+            '有' => ans.push(Lex::You3),
             '數' => ans.push(Lex::Type(Type::Shu4)),
             '列' => ans.push(Lex::Type(Type::Lie4)),
             '言' => ans.push(Lex::Type(Type::Yan2)),
@@ -327,6 +334,14 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
                     None => return Err(Error::UnexpectedEOFAfter('書')),
                     Some('之') => ans.push(Lex::Shu1Zhi1),
                     Some(a) => return Err(Error::UnexpectedCharAfter('書', a)),
+                }
+            }
+            '名' => {
+                let next = iter.next();
+                match next {
+                    None => return Err(Error::UnexpectedEOFAfter('名')),
+                    Some('之') => ans.push(Lex::Ming2Zhi1),
+                    Some(a) => return Err(Error::UnexpectedCharAfter('名', a)),
                 }
             }
             '今' => {

@@ -7,7 +7,11 @@ struct Env {
     shu1zhi1_reference: Vec<String>,
 }
 
-fn compile_literal(lit: Option<&parse::Data>, default_type: lex::Type) -> String {
+fn compile_literal(
+    lit: Option<&parse::Data>,
+    default_type: lex::Type,
+    conversion_table: &HashMap<String, String>,
+) -> String {
     match lit {
         None => match default_type {
             lex::Type::Shu4 => "0.0".to_string(),
@@ -18,14 +22,18 @@ fn compile_literal(lit: Option<&parse::Data>, default_type: lex::Type) -> String
         Some(v) => match v.clone() {
             parse::Data::BoolValue(true) => "true".to_string(),
             parse::Data::BoolValue(false) => "false".to_string(),
-            parse::Data::Identifier(_) => unimplemented!(),
+            parse::Data::Identifier(ident) => to_pinyin(ident, &conversion_table),
             parse::Data::IntNum(intnum) => format!("{}.0", intnum),
             parse::Data::StringLiteral(strlit) => format!("\"{}\"", strlit), // FIXME properly escape
         },
     }
 }
 
-fn compile_statement(env: &mut Env, st: &parse::Statement) -> String {
+fn compile_statement(
+    env: &mut Env,
+    st: &parse::Statement,
+    conversion_table: &HashMap<String, String>,
+) -> String {
     let mut ans = String::new();
     match st {
         parse::Statement::Declare(parse::DeclareStatement {
@@ -40,7 +48,7 @@ fn compile_statement(env: &mut Env, st: &parse::Statement) -> String {
                     "{}let _ans{} = {};\n",
                     "    ".repeat(env.indent_level),
                     env.anon_counter,
-                    compile_literal(data_arr.get(i), *type_)
+                    compile_literal(data_arr.get(i), *type_, &conversion_table)
                 ));
                 new_shu1zhi1.push(format!("_ans{}", env.anon_counter));
             }
@@ -59,6 +67,15 @@ fn compile_statement(env: &mut Env, st: &parse::Statement) -> String {
             }
 
             ans.push_str(");\n");
+            env.shu1zhi1_reference = vec![];
+        }
+        parse::Statement::InitDefine { type_, data, name } => {
+            ans = format!(
+                "{}let {} = {};\n",
+                "    ".repeat(env.indent_level),
+                to_pinyin(name.clone(), &conversion_table),
+                compile_literal(Some(data), *type_, &conversion_table)
+            );
             env.shu1zhi1_reference = vec![];
         }
         parse::Statement::ForEnum { num, statements } => {
@@ -91,7 +108,7 @@ fn compile_statement(env: &mut Env, st: &parse::Statement) -> String {
                 shu1zhi1_reference: env.shu1zhi1_reference.clone(),
             };
             for st in statements {
-                inner.push_str(&compile_statement(&mut new_env, &st));
+                inner.push_str(&compile_statement(&mut new_env, &st, &conversion_table));
             }
             ans = format!(
                 "{}for _ in 0..{} {{\n{}{}}}\n",
@@ -105,8 +122,25 @@ fn compile_statement(env: &mut Env, st: &parse::Statement) -> String {
 
     ans
 }
+
+fn to_pinyin(ident: parse::Identifier, conversion_table: &HashMap<String, String>) -> String {
+    let parse::Identifier(i) = ident;
+    let vec = i
+        .chars()
+        .map(|c| {
+            conversion_table
+                .get(&format!("{:X}", c as u32).to_string())
+                .unwrap_or(&"_".to_string())
+                .to_string()
+        })
+        .collect::<Vec<_>>();
+    vec.join("")
+}
 use std::collections::HashMap;
-pub fn compile(parsed: &Vec<parse::Statement>, conversion_table: &HashMap<String, String>) -> String {
+pub fn compile(
+    parsed: &Vec<parse::Statement>,
+    conversion_table: &HashMap<String, String>,
+) -> String {
     let mut ans = "fn main() {\n".to_string();
     let mut env = Env {
         anon_counter: 0,
@@ -115,7 +149,7 @@ pub fn compile(parsed: &Vec<parse::Statement>, conversion_table: &HashMap<String
     };
 
     for st in parsed {
-        ans.push_str(&compile_statement(&mut env, &st));
+        ans.push_str(&compile_statement(&mut env, &st, &conversion_table));
     }
 
     ans.push_str(r#"}"#);

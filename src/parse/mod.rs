@@ -7,6 +7,11 @@ pub enum Statement {
         num: i64,
         statements: Vec<Statement>,
     },
+    InitDefine {
+        type_: lex::Type,
+        data: Data,
+        name: Identifier,
+    },
     // Define,
     // Function,
     // If,
@@ -33,10 +38,13 @@ pub struct DeclareStatement {
 pub enum Data {
     StringLiteral(String),
     BoolValue(bool),
-    Identifier(String),
+    Identifier(Identifier),
     IntNum(i64),
     // FloatNum(f64),
 }
+
+#[derive(Debug, Clone)]
+pub struct Identifier(pub String);
 
 #[derive(Debug)]
 pub enum Error {
@@ -73,7 +81,7 @@ fn parse_data(
     match token {
         lex::Lex::StringLiteral(strlit) => Ok(Data::StringLiteral(strlit.to_string())),
         lex::Lex::BoolValue(bv) => Ok(Data::BoolValue(bv.interpret())),
-        lex::Lex::Identifier(ident) => Ok(Data::Identifier(ident.to_string())),
+        lex::Lex::Identifier(ident) => Ok(Data::Identifier(Identifier(ident.to_string()))),
         lex::Lex::IntNum(intnum) => Ok(Data::IntNum(interpret_intnum(intnum))), /* FIXME: must handle float */
         _ => unimplemented!(),
     }
@@ -88,6 +96,54 @@ fn parse_statement(
     };
 
     match token {
+        lex::Lex::You3 => {
+            let next = iter.next();
+            match next {
+                None => return Err(Error::UnexpectedEOF),
+                Some(lex::Lex::Type(t)) => {
+                    let data = parse_data(&mut iter)?;
+                    // According to https://wy-lang.org/spec.html#init_define_statement
+                    //  '有' TYPE data (name_single_statement)?
+                    // and thus name_single_statement seems optional.
+                    // However,
+                    //
+                    // ```
+                    // 有數一。
+                    // ```
+                    //
+                    // fails to compile and gives the message "TypeError: a.names is undefined".
+                    // Hence for now I will assume the name_single_statement part obligatory, unless I find any counterexamples.
+
+                    let next = iter.next();
+                    match next {
+                        None => panic!("If this message is obtained by a wenyan program that successfully compiles in the original edition, please submit an issue."),
+                        Some(lex::Lex::Ming2Zhi1) => {
+                            let next = iter.next();
+                            match next {
+                                None => return Err(Error::UnexpectedEOF),
+                                Some(lex::Lex::Yue1) => {
+                                    let next = iter.next();
+                                    match next {
+                                        None => return Err(Error::UnexpectedEOF),
+                                        Some(lex::Lex::Identifier(ident)) => {
+                                            return Ok(Statement::InitDefine {
+                                                type_: *t,
+                                                name: Identifier(ident.to_string()),
+                                                data
+                                            })
+                                        }
+                                        _ => return Err(Error::UnresolvableTokens),
+                                    }
+                                }
+                                _ => return Err(Error::UnresolvableTokens),
+                            }
+                        }
+                        _ => panic!("If this message is obtained by a wenyan program that successfully compiles in the original edition, please submit an issue."),
+                    }
+                }
+                _ => return Err(Error::UnresolvableTokens),
+            }
+        }
         lex::Lex::Wei2Shi4 => {
             let next = iter.next();
             match next {
