@@ -129,8 +129,9 @@ fn parse_preposition(
     iter: &mut peek_nth::PeekableNth<std::slice::Iter<'_, lex::Lex>>,
 ) -> Result<lex::Preposition, Error> {
     if let lex::Lex::Preposition(p) = iter.next().ok_or(Error::UnexpectedEOF)? {
-        return Ok(*p)} else {
-         return Err(Error::SomethingWentWrong)
+        return Ok(*p);
+    } else {
+        return Err(Error::SomethingWentWrong);
     }
 }
 

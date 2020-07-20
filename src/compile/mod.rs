@@ -121,6 +121,17 @@ fn compile_define(
     ans
 }
 
+fn compile_dataorqi2(env: &Env, data1: &parse::DataOrQi2) -> String {
+    match data1 {
+        parse::DataOrQi2::Qi2 => env
+            .shu1zhi1_reference
+            .last()
+            .unwrap_or(&"f64::NAN".to_string())
+            .to_string(),
+        parse::DataOrQi2::Data(data) => compile_literal(&env, &data),
+    }
+}
+
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
     let mut ans = String::new();
     match st {
@@ -150,23 +161,9 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
                         "{}let _ans{} = {} {} {};\n",
                         "    ".repeat(env.indent_level),
                         env.ans_counter,
-                        match data1 {
-                            parse::DataOrQi2::Qi2 => env
-                                .shu1zhi1_reference
-                                .last()
-                                .unwrap_or(&"f64::NAN".to_string())
-                                .to_string(),
-                            parse::DataOrQi2::Data(data) => compile_literal(&env, data),
-                        },
+                        compile_dataorqi2(&env, data1),
                         op.to_str(),
-                        match data2 {
-                            parse::DataOrQi2::Qi2 => env
-                                .shu1zhi1_reference
-                                .last()
-                                .unwrap_or(&"f64::NAN".to_string())
-                                .to_string(),
-                            parse::DataOrQi2::Data(data) => compile_literal(&env, data),
-                        },
+                        compile_dataorqi2(&env, data2),
                     ));
                     env.shu1zhi1_reference = vec![format!("_ans{}", env.ans_counter)];
                 }
@@ -176,23 +173,9 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
                         "{}let _ans{} = {} {} {};\n",
                         "    ".repeat(env.indent_level),
                         env.ans_counter,
-                        match data2 {
-                            parse::DataOrQi2::Qi2 => env
-                                .shu1zhi1_reference
-                                .last()
-                                .unwrap_or(&"f64::NAN".to_string())
-                                .to_string(),
-                            parse::DataOrQi2::Data(data) => compile_literal(&env, data),
-                        },
+                        compile_dataorqi2(&env, data2),
                         op.to_str(),
-                        match data1 {
-                            parse::DataOrQi2::Qi2 => env
-                                .shu1zhi1_reference
-                                .last()
-                                .unwrap_or(&"f64::NAN".to_string())
-                                .to_string(),
-                            parse::DataOrQi2::Data(data) => compile_literal(&env, data),
-                        },
+                        compile_dataorqi2(&env, data1),
                     ));
                     env.shu1zhi1_reference = vec![format!("_ans{}", env.ans_counter)];
                 }
