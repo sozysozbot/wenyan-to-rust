@@ -1,6 +1,7 @@
 use crate::parse;
 use bimap::BiMap;
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 fn to_pinyin(ident: parse::Identifier, conversion_table: &HashMap<String, String>) -> String {
     let parse::Identifier(i) = ident;
@@ -20,18 +21,31 @@ type Hanzi = parse::Identifier;
 type Ascii = String;
 
 #[derive(Clone)]
-pub struct IdentBiMap(BiMap<Hanzi, Ascii>);
+pub struct IdentBiMap{
+    bimap: BiMap<Hanzi, Ascii>,
+    mutable_idents: HashSet<Hanzi>
+}
 
 impl IdentBiMap {
     pub fn translate_from_hanzi(&self, id: &parse::Identifier) -> Ascii {
-        self.0.get_by_left(id).unwrap().to_string()
+        self.bimap.get_by_left(id).unwrap().to_string()
+    }
+
+    pub fn is_mutable(&self, id: &parse::Identifier) -> bool {
+        self.mutable_idents.contains(id)
     }
 
     pub fn new(parsed: &Vec<parse::Statement>, conversion_table: &HashMap<String, String>) -> Self {
-        let mut ans = IdentBiMap(BiMap::new());
+        let mut ans = IdentBiMap{ 
+            bimap: BiMap::new(),
+            mutable_idents: HashSet::new()
+        };
         for st in parsed {
             ans.insert_stmt(&st, &conversion_table);
         }
+
+        eprintln!("bimap: {:?}", ans.bimap);
+        eprintln!("mutable_idents: {:?}", ans.mutable_idents);
         ans
     }
 
@@ -41,7 +55,7 @@ impl IdentBiMap {
         conversion_table: &HashMap<String, String>,
     ) {
         // if already known, no need to do anything
-        if self.0.get_by_left(&ident).is_some() {
+        if self.bimap.get_by_left(&ident).is_some() {
             return;
         }
 
@@ -50,10 +64,10 @@ impl IdentBiMap {
         let mut candidate: Ascii = to_pinyin(ident.clone(), &conversion_table);
 
         loop {
-            if self.0.get_by_right(&candidate).is_some() {
+            if self.bimap.get_by_right(&candidate).is_some() {
                 candidate.push('_');
             } else {
-                self.0.insert(ident, candidate);
+                self.bimap.insert(ident, candidate);
                 break;
             }
         }
@@ -69,6 +83,7 @@ impl IdentBiMap {
         match st {
             parse::Statement::Assign { ident, data } => {
                 self.insert_ident(ident.clone(), &conversion_table);
+                self.mutable_idents.insert(ident.clone());
                 self.insert_dat(data, &conversion_table);
             }
             parse::Statement::Print => {}

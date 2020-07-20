@@ -103,8 +103,13 @@ fn compile_define(
             }
             Some(ident) => {
                 ans.push_str(&format!(
-                    "{}let {} = {};\n",
+                    "{}let {}{} = {};\n",
                     "    ".repeat(env.indent_level),
+                    if env.ident_map.is_mutable(&ident) { 
+                        "mut "
+                    } else { 
+                        ""
+                     },
                     env.ident_map.translate_from_hanzi(&ident),
                     compile_optional_literal(&env, data_arr.get(i), *type_)
                 ));
@@ -154,7 +159,7 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
         }
         parse::Statement::Assign { ident, data } => {
             ans = format!(
-                "{}{} = {}; // error[E0384]: cannot assign twice to immutable variable\n",
+                "{}{} = {};\n",
                 "    ".repeat(env.indent_level),
                 env.ident_map.translate_from_hanzi(&ident),
                 compile_literal(&env, data)
@@ -162,8 +167,13 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
         }
         parse::Statement::InitDefine { type_, data, name } => {
             ans = format!(
-                "{}let {} = {};\n",
+                "{}let {}{} = {};\n",
                 "    ".repeat(env.indent_level),
+                if env.ident_map.is_mutable(&name) { 
+                    "mut "
+                } else { 
+                    ""
+                 },
                 env.ident_map.translate_from_hanzi(&name),
                 compile_optional_literal(&env, Some(data), *type_)
             );
