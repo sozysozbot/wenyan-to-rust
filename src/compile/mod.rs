@@ -6,9 +6,11 @@ struct Env {
     rand_counter: usize,
     indent_level: usize,
     shu1zhi1_reference: Vec<String>,
+    ident_map: BiMap<Hanzi, Ascii>
 }
 
 fn compile_optional_literal(
+    env: &Env,
     lit: Option<&parse::Data>,
     default_type: lex::Type,
     conversion_table: &HashMap<String, String>,
@@ -20,15 +22,15 @@ fn compile_optional_literal(
             lex::Type::Yan2 => "\"\"".to_string(),
             lex::Type::Yao2 => "false".to_string(),
         },
-        Some(v) => compile_literal(v, &conversion_table),
+        Some(v) => compile_literal(&env, v, &conversion_table),
     }
 }
 
-fn compile_literal(v: &parse::Data, conversion_table: &HashMap<String, String>) -> String {
+fn compile_literal(env: &Env, v: &parse::Data, conversion_table: &HashMap<String, String>) -> String {
     match v.clone() {
         parse::Data::BoolValue(true) => "true".to_string(),
         parse::Data::BoolValue(false) => "false".to_string(),
-        parse::Data::Identifier(ident) => to_pinyin(ident, &conversion_table),
+        parse::Data::Identifier(ident) => env.ident_map.get_by_left(&ident).unwrap().to_string(),
         parse::Data::IntNum(intnum) => format!("{}.0", intnum),
         parse::Data::StringLiteral(strlit) => format!("\"{}\"", strlit), // FIXME properly escape
     }
@@ -96,7 +98,7 @@ fn compile_define(
                     "{}let _ans{} = {};\n",
                     "    ".repeat(env.indent_level),
                     env.ans_counter,
-                    compile_optional_literal(data_arr.get(i), *type_, &conversion_table)
+                    compile_optional_literal(&env, data_arr.get(i), *type_, &conversion_table)
                 ));
                 new_shu1zhi1.push(format!("_ans{}", env.ans_counter));
             }
@@ -104,8 +106,8 @@ fn compile_define(
                 ans.push_str(&format!(
                     "{}let {} = {};\n",
                     "    ".repeat(env.indent_level),
-                    to_pinyin(ident.clone(), &conversion_table),
-                    compile_optional_literal(data_arr.get(i), *type_, &conversion_table)
+                    env.ident_map.get_by_left(&ident).unwrap(),
+                    compile_optional_literal(&env, data_arr.get(i), *type_, &conversion_table)
                 ));
             }
         }
@@ -134,7 +136,7 @@ fn compile_statement(
                     "{}let _ans{} = {};\n",
                     "    ".repeat(env.indent_level),
                     env.ans_counter,
-                    compile_optional_literal(data_arr.get(i), *type_, &conversion_table)
+                    compile_optional_literal(&env, data_arr.get(i), *type_, &conversion_table)
                 ));
                 new_shu1zhi1.push(format!("_ans{}", env.ans_counter));
             }
@@ -159,16 +161,16 @@ fn compile_statement(
             ans = format!(
                 "{}{} = {}; // error[E0384]: cannot assign twice to immutable variable\n",
                 "    ".repeat(env.indent_level),
-                to_pinyin(ident.clone(), &conversion_table),
-                compile_literal(data, &conversion_table)
+                env.ident_map.get_by_left(&ident).unwrap(),
+                compile_literal(&env, data, &conversion_table)
             )
         }
         parse::Statement::InitDefine { type_, data, name } => {
             ans = format!(
                 "{}let {} = {};\n",
                 "    ".repeat(env.indent_level),
-                to_pinyin(name.clone(), &conversion_table),
-                compile_optional_literal(Some(data), *type_, &conversion_table)
+                env.ident_map.get_by_left(&name).unwrap(),
+                compile_optional_literal(&env, Some(data), *type_, &conversion_table)
             );
             env.shu1zhi1_reference = vec![];
         }
@@ -181,6 +183,7 @@ fn compile_statement(
                 indent_level: env.indent_level + 1,
                 rand_counter: env.rand_counter,
                 ans_counter: env.ans_counter,
+                ident_map: env.ident_map.clone(),
 
                 /// shu1zhi1_reference must be inherited, since in the original compiler
                 ///
@@ -225,6 +228,7 @@ fn compile_statement(
                 indent_level: env.indent_level + 1,
                 ans_counter: env.ans_counter,
                 rand_counter: env.rand_counter,
+                ident_map: env.ident_map.clone(),
 
                 // shu1zhi1_reference must be inherited
                 shu1zhi1_reference: env.shu1zhi1_reference.clone(),
@@ -239,7 +243,7 @@ fn compile_statement(
                 rand_n,
                 "    ".repeat(env.indent_level),
                 rand_n,
-                to_pinyin(ident.clone(), &conversion_table),
+                env.ident_map.get_by_left(&ident).unwrap(),
                 inner,
                 "    ".repeat(env.indent_level + 1),
                 rand_n,
@@ -247,6 +251,30 @@ fn compile_statement(
             );
         }
     }
+
+    ans
+}
+
+use std::collections::HashMap;
+pub fn compile(
+    parsed: &Vec<parse::Statement>,
+    conversion_table: &HashMap<String, String>,
+) -> String {
+    let mut ans = "fn main() {\n".to_string();
+    let mut env = Env {
+        ans_counter: 0,
+        rand_counter: 0,
+        indent_level: 1,
+        shu1zhi1_reference: vec![],
+        ident_map: create_ident_map(&parsed, &conversion_table)
+    };
+
+    for st in parsed {
+        ans.push_str(&compile_statement(&mut env, &st, &conversion_table));
+    }
+
+    ans.push_str(r#"}"#);
+    ans.push_str("\n");
 
     ans
 }
@@ -264,25 +292,105 @@ fn to_pinyin(ident: parse::Identifier, conversion_table: &HashMap<String, String
         .collect::<Vec<_>>();
     vec.join("")
 }
-use std::collections::HashMap;
-pub fn compile(
-    parsed: &Vec<parse::Statement>,
-    conversion_table: &HashMap<String, String>,
-) -> String {
-    let mut ans = "fn main() {\n".to_string();
-    let mut env = Env {
-        ans_counter: 0,
-        rand_counter: 0,
-        indent_level: 1,
-        shu1zhi1_reference: vec![],
-    };
 
-    for st in parsed {
-        ans.push_str(&compile_statement(&mut env, &st, &conversion_table));
+fn insert_to_ident_map(
+    ident: parse::Identifier,
+    ans: &mut BiMap<Hanzi, Ascii>,
+    conversion_table: &HashMap<String, String>,
+) {
+    // if already known, no need to do anything
+    if ans.get_by_left(&ident).is_some() {
+        return;
     }
 
-    ans.push_str(r#"}"#);
-    ans.push_str("\n");
+    // otherwise, ident is unknown, and hence must be added.
+
+    let mut candidate: Ascii = to_pinyin(ident.clone(), &conversion_table);
+
+    loop {
+        if ans.get_by_right(&candidate).is_some() {
+            candidate.push('_');
+        } else {
+            ans.insert(ident, candidate);
+            break;
+        }
+    }
+}
+
+fn insert_dat_to_ident_map(
+    dat: &parse::Data,
+    mut ans: &mut BiMap<Hanzi, Ascii>,
+    conversion_table: &HashMap<String, String>,
+) {
+    if let parse::Data::Identifier(id) = dat {
+        insert_to_ident_map(id.clone(), &mut ans, &conversion_table)
+    }
+}
+
+fn insert_stmt_to_ident_map(
+    st: &parse::Statement,
+    mut ans: &mut BiMap<Hanzi, Ascii>,
+    conversion_table: &HashMap<String, String>,
+) {
+    match st {
+        parse::Statement::Assign{ ident, data} => {
+            insert_to_ident_map(ident.clone(), &mut ans, &conversion_table);
+            insert_dat_to_ident_map(data, &mut ans, &conversion_table);
+        }
+        parse::Statement::Print => {}
+        parse::Statement::ForEnum { statements, num: _ } => {
+            for s in statements {
+                insert_stmt_to_ident_map(&s, &mut ans, &conversion_table)
+            }
+        }
+        parse::Statement::Declare { 0: parse::DeclareStatement {
+            how_many_variables: _,
+            type_: _,
+            data_arr
+        } } => {
+            for dat in data_arr {
+                insert_dat_to_ident_map(dat, &mut ans, &conversion_table);   
+            }
+        }
+        parse::Statement::InitDefine { name, type_: _, data: dat } => {
+            insert_dat_to_ident_map(dat, &mut ans, &conversion_table);
+            insert_to_ident_map(name.clone(), &mut ans, &conversion_table)
+        }
+        parse::Statement::ForEnumIdent { ident, statements} => {
+            insert_to_ident_map(ident.clone(), &mut ans, &conversion_table);
+            for s in statements {
+                insert_stmt_to_ident_map(&s, &mut ans, &conversion_table)
+            }
+        }
+        parse::Statement::Define { idents, decl: parse::DeclareStatement {
+            how_many_variables: _,
+            type_: _,
+            data_arr
+        } } => {
+            for dat in data_arr {
+                insert_dat_to_ident_map(dat, &mut ans, &conversion_table);   
+            }
+            for ident in idents {
+                insert_to_ident_map(ident.clone(), &mut ans, &conversion_table)
+            }
+        }
+    }
+}
+
+use bimap::BiMap;
+
+type Hanzi = parse::Identifier;
+type Ascii = String;
+
+fn create_ident_map(
+    parsed: &Vec<parse::Statement>,
+    conversion_table: &HashMap<String, String>,
+) -> BiMap<Hanzi, Ascii> {
+    let mut ans = BiMap::new();
+
+    for st in parsed {
+        insert_stmt_to_ident_map(&st, &mut ans, &conversion_table);
+    }
 
     ans
 }

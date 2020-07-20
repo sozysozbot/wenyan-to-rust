@@ -53,7 +53,7 @@ pub enum Data {
     // FloatNum(f64),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, Hash)]
 pub struct Identifier(pub String);
 
 #[derive(Debug)]

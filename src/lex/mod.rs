@@ -341,28 +341,25 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
             },
             '書' => two_char_keyword(&mut iter, '書', '之', Lex::Shu1Zhi1)?,
             '名' => two_char_keyword(&mut iter, '名', '之', Lex::Ming2Zhi1)?,
-            '之' => {
-                let peek = iter.peek();
-                match peek {
-                    Some('書') => {
-                        iter.next();
-                        Lex::Zhi1Shu1
-                    }
-                    Some('義') => {
-                        iter.next();
-                        Lex::Zhi1Yi4
-                    }
-                    Some('術') => {
-                        iter.next();
-                        two_char_keyword(&mut iter, '術', '也', Lex::Zhi1Shu4Ye3)?
-                    }
-                    Some('物') => {
-                        iter.next();
-                        two_char_keyword(&mut iter, '物', '也', Lex::Zhi1Wu4Ye3)?
-                    }
-                    _ => Lex::Zhi1,
+            '之' => match iter.peek() {
+                Some('書') => {
+                    iter.next();
+                    Lex::Zhi1Shu1
                 }
-            }
+                Some('義') => {
+                    iter.next();
+                    Lex::Zhi1Yi4
+                }
+                Some('術') => {
+                    iter.next();
+                    two_char_keyword(&mut iter, '術', '也', Lex::Zhi1Shu4Ye3)?
+                }
+                Some('物') => {
+                    iter.next();
+                    two_char_keyword(&mut iter, '物', '也', Lex::Zhi1Wu4Ye3)?
+                }
+                _ => Lex::Zhi1,
+            },
             '今' => {
                 let peek = iter.peek();
                 match peek {
