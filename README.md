@@ -21,3 +21,8 @@ fn main() {
 }
 ```
 
+## todo
+* Fix mutability issue and finish 明義第一
+* Avoid name conflict
+* Output numbers in Hanzi
+
