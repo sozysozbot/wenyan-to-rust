@@ -275,7 +275,28 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
                 env.ident_map.translate_from_hanzi(&name),
                 compile_optional_literal(&env, Some(data), *type_)
             );
-            env.shu1zhi1_reference = vec![];
+            // must inherit shu1zhi1_reference
+            // example:
+            // ```
+            // 吾有一數。曰四。 減其於七。
+            // 有數二。名之曰「作c」。書之。
+            // ```
+            // is compiled to
+            // ```
+            // var _ans1 = 3;
+            // const _ans2 = _ans1 + 5;
+            // const _ans3 = _ans2 - 7;
+            // var _ans4 = 3;
+            // const _ans5 = 2 + _ans4;
+            // const _ans6 = 8 - _ans5;
+            // var _ans7 = 3;
+            // var _ans8 = 0;
+            // const _ans9 = _ans8 - 7;
+            // var ZUO4_ = 3;
+            // console.log(_ans9);
+            // var ZUO4__ = 5;
+            // console.log();
+            // ```
             return r;
         }
         parse::Statement::Define { decl, idents } => {
