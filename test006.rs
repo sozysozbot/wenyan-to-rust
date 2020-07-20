@@ -1,15 +1,3 @@
-# wenyan-to-rust
-
-```
-有數三。名之曰「甲」。
-為是「甲」遍。
-	吾有一言。曰「「問天地好在。」」。書之。
-云云。
-```
-
-is compiled to
-
-```
 fn main() {
     let JIA3 = 3.0;
     let mut _rand1 = 0.0;
@@ -19,5 +7,3 @@ fn main() {
         _rand1 += 1.0;
     }
 }
-```
-

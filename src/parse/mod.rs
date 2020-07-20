@@ -7,6 +7,10 @@ pub enum Statement {
         num: i64,
         statements: Vec<Statement>,
     },
+    ForEnumIdent {
+       ident: Identifier,
+        statements: Vec<Statement>,
+    },
     InitDefine {
         type_: lex::Type,
         data: Data,
@@ -158,7 +162,24 @@ fn parse_statement(
                     }
                     _ => return Err(Error::UnresolvableTokens),
                 },
-                lex::Lex::Identifier(_) => unimplemented!("looping with an identifier"),
+                lex::Lex::Identifier(ident) => match iter.next().ok_or(Error::UnexpectedEOF)? {
+                    lex::Lex::Bian4 => {
+                        let mut inner = vec![];
+                        loop {
+                            if iter.peek() == Some(&&lex::Lex::Yun2Yun2) {
+                                iter.next();
+                                break;
+                            }
+
+                            inner.push(parse_statement(&mut iter)?);
+                        }
+                        return Ok(Statement::ForEnumIdent {
+                            ident: Identifier(ident.to_string()),
+                            statements: inner,
+                        });
+                    }
+                    _ => return Err(Error::UnresolvableTokens),
+                },
                 _ => return Err(Error::UnresolvableTokens),
             }
         }

@@ -2,7 +2,8 @@ use crate::lex;
 use crate::parse;
 #[derive(Clone)]
 struct Env {
-    anon_counter: usize,
+    ans_counter: usize,
+    rand_counter: usize,
     indent_level: usize,
     shu1zhi1_reference: Vec<String>,
 }
@@ -43,14 +44,14 @@ fn compile_statement(
         }) => {
             let mut new_shu1zhi1 = vec![];
             for i in 0..*int_num {
-                env.anon_counter += 1;
+                env.ans_counter += 1;
                 ans.push_str(&format!(
                     "{}let _ans{} = {};\n",
                     "    ".repeat(env.indent_level),
-                    env.anon_counter,
+                    env.ans_counter,
                     compile_literal(data_arr.get(i), *type_, &conversion_table)
                 ));
-                new_shu1zhi1.push(format!("_ans{}", env.anon_counter));
+                new_shu1zhi1.push(format!("_ans{}", env.ans_counter));
             }
             env.shu1zhi1_reference = new_shu1zhi1
         }
@@ -82,7 +83,8 @@ fn compile_statement(
             let mut inner = String::new();
             let mut new_env = Env {
                 indent_level: env.indent_level + 1,
-                anon_counter: env.anon_counter,
+                rand_counter: env.rand_counter,
+                ans_counter: env.ans_counter,
 
                 /// shu1zhi1_reference must be inherited, since in the original compiler
                 ///
@@ -118,6 +120,36 @@ fn compile_statement(
                 "    ".repeat(env.indent_level),
             );
         }
+
+        parse::Statement::ForEnumIdent { ident, statements } => {
+            let mut inner = String::new();
+            env.rand_counter += 1;
+            let rand_n = env.rand_counter;
+            let mut new_env = Env {
+                indent_level: env.indent_level + 1,
+                ans_counter: env.ans_counter,
+                rand_counter: env.rand_counter,
+
+                // shu1zhi1_reference must be inherited
+                shu1zhi1_reference: env.shu1zhi1_reference.clone(),
+            };
+            for st in statements {
+                inner.push_str(&compile_statement(&mut new_env, &st, &conversion_table));
+            }
+
+            ans = format!(
+                "{}let mut _rand{} = 0.0;\n{}while _rand{} < {} {{\n{}{}_rand{} += 1.0;\n{}}}\n",
+                "    ".repeat(env.indent_level),
+                rand_n,
+                "    ".repeat(env.indent_level),
+                rand_n,
+                to_pinyin(ident.clone(), &conversion_table),
+                inner,
+                "    ".repeat(env.indent_level + 1),
+                rand_n,
+                "    ".repeat(env.indent_level),
+            );
+        }
     }
 
     ans
@@ -143,7 +175,8 @@ pub fn compile(
 ) -> String {
     let mut ans = "fn main() {\n".to_string();
     let mut env = Env {
-        anon_counter: 0,
+        ans_counter: 0,
+        rand_counter: 0,
         indent_level: 1,
         shu1zhi1_reference: vec![],
     };
