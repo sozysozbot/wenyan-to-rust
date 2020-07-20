@@ -121,17 +121,6 @@ fn compile_define(
     ans
 }
 
-fn compile_dataorqi2(env: &Env, data1: &parse::DataOrQi2) -> String {
-    match data1 {
-        parse::DataOrQi2::Qi2 => env
-            .shu1zhi1_reference
-            .last()
-            .unwrap_or(&"f64::NAN".to_string())
-            .to_string(),
-        parse::DataOrQi2::Data(data) => compile_literal(&env, &data),
-    }
-}
-
 fn compile_forenum(env: &Env, num: i64, statements: &[parse::Statement]) -> String {
     let mut inner = String::new();
     let mut new_env = Env {
@@ -176,6 +165,17 @@ fn compile_forenum(env: &Env, num: i64, statements: &[parse::Statement]) -> Stri
 }
 
 fn compile_math(env: &mut Env, math: &parse::MathKind) -> String {
+    fn compile_dataorqi2(env: &Env, a: &parse::DataOrQi2) -> String {
+        match a {
+            parse::DataOrQi2::Qi2 => env
+                .shu1zhi1_reference
+                .last()
+                .unwrap_or(&"f64::NAN".to_string())
+                .to_string(),
+            parse::DataOrQi2::Data(data) => compile_literal(&env, &data),
+        }
+    }
+
     let parse::MathKind::ArithBinaryMath(op, data1, prep, data2) = math;
     // 吾有三數。曰三曰五曰二名之曰「甲」。加其以五。
     // is to be translated as
@@ -192,6 +192,18 @@ fn compile_math(env: &mut Env, math: &parse::MathKind) -> String {
     // const _ans1 = undefined + 5;
     // console.log(_ans1);
     // ```
+    // Thus, when we do not have anything to reference, I must pad with f64::NAN
+
+    // Both
+    // 加一以三。加二以三。減其以其
+    // and
+    // 加一以三。加二以三。減其於其
+    // are compiled to
+    // ```
+    // const _ans1 = 1 + 3;
+    // const _ans2 = 2 + 3;
+    // const _ans3 = _ans2 - undefined;
+    // ```
 
     let left = match prep {
         lex::Preposition::Yi3 => data1,
@@ -201,14 +213,22 @@ fn compile_math(env: &mut Env, math: &parse::MathKind) -> String {
         lex::Preposition::Yi3 => data2,
         lex::Preposition::Yu2 => data1,
     };
+
+    let (left, right) = match (left, right) {
+        (parse::DataOrQi2::Qi2, parse::DataOrQi2::Qi2) => {
+            (compile_dataorqi2(&env, left), "f64::NAN".to_string())
+        }
+        (a, b) => (compile_dataorqi2(&env, a), compile_dataorqi2(&env, b)),
+    };
+
     env.ans_counter += 1;
     let r = format!(
         "{}let _ans{} = {} {} {};\n",
         "    ".repeat(env.indent_level),
         env.ans_counter,
-        compile_dataorqi2(&env, &left),
+        left,
         op.to_str(),
-        compile_dataorqi2(&env, &right),
+        right,
     );
     env.shu1zhi1_reference = vec![format!("_ans{}", env.ans_counter)];
     return r;
