@@ -24,20 +24,15 @@ fn compile_optional_literal(
     }
 }
 
-fn compile_literal(
-    v: &parse::Data,
-    conversion_table: &HashMap<String, String>,
-) -> String {
+fn compile_literal(v: &parse::Data, conversion_table: &HashMap<String, String>) -> String {
     match v.clone() {
-            parse::Data::BoolValue(true) => "true".to_string(),
-            parse::Data::BoolValue(false) => "false".to_string(),
-            parse::Data::Identifier(ident) => to_pinyin(ident, &conversion_table),
-            parse::Data::IntNum(intnum) => format!("{}.0", intnum),
-            parse::Data::StringLiteral(strlit) => format!("\"{}\"", strlit), // FIXME properly escape
-        }
-    
+        parse::Data::BoolValue(true) => "true".to_string(),
+        parse::Data::BoolValue(false) => "false".to_string(),
+        parse::Data::Identifier(ident) => to_pinyin(ident, &conversion_table),
+        parse::Data::IntNum(intnum) => format!("{}.0", intnum),
+        parse::Data::StringLiteral(strlit) => format!("\"{}\"", strlit), // FIXME properly escape
+    }
 }
-
 
 fn compile_statement(
     env: &mut Env,

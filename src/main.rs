@@ -1,4 +1,5 @@
 #![warn(clippy::pedantic)]
+#![allow(clippy::non_ascii_literal)]
 use std::fs::File;
 use std::io::prelude::*;
 extern crate clap;

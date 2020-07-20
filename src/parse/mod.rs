@@ -145,6 +145,100 @@ fn parse_init_define_statement_after_you3(
     }
 }
 
+fn parse_for_enum_statement_after_wei2shi4(
+    mut iter: &mut peek_nth::PeekableNth<std::slice::Iter<'_, lex::Lex>>,
+) -> Result<Statement, Error> {
+    match iter.next().ok_or(Error::UnexpectedEOF)? {
+        lex::Lex::IntNum(num) => match iter.next().ok_or(Error::UnexpectedEOF)? {
+            lex::Lex::Bian4 => {
+                let mut inner = vec![];
+                loop {
+                    if iter.peek() == Some(&&lex::Lex::Yun2Yun2) {
+                        iter.next();
+                        break;
+                    }
+
+                    inner.push(parse_statement(&mut iter)?);
+                }
+                return Ok(Statement::ForEnum {
+                    num: interpret_intnum(num),
+                    statements: inner,
+                });
+            }
+            _ => return Err(Error::SomethingWentWrong),
+        },
+        lex::Lex::Identifier(ident) => match iter.next().ok_or(Error::UnexpectedEOF)? {
+            lex::Lex::Bian4 => {
+                let mut inner = vec![];
+                loop {
+                    if iter.peek() == Some(&&lex::Lex::Yun2Yun2) {
+                        iter.next();
+                        break;
+                    }
+
+                    inner.push(parse_statement(&mut iter)?);
+                }
+                return Ok(Statement::ForEnumIdent {
+                    ident: Identifier(ident.to_string()),
+                    statements: inner,
+                });
+            }
+            _ => return Err(Error::SomethingWentWrong),
+        },
+        _ => return Err(Error::SomethingWentWrong),
+    }
+}
+
+fn parse_assign_after_xi1zhi1(
+    mut iter: &mut peek_nth::PeekableNth<std::slice::Iter<'_, lex::Lex>>,
+) -> Result<Statement, Error> {
+    // '昔之' IDENTIFIER
+    // (
+    //     '之' (INT_NUM|STRING_LITERAL|IDENTIFIER)
+    // )? '者'
+    // (
+    //     (
+    //         '今'
+    //          (
+    //              (data ('之' INT_NUM)?)|'其'
+    //          ) '是矣'
+    //     ) |
+    //     '今不復存矣'
+    // ) ;
+
+    if let lex::Lex::Identifier(ident) = iter.next().ok_or(Error::UnexpectedEOF)? {
+        match iter.next().ok_or(Error::UnexpectedEOF)? {
+            lex::Lex::Zhi1 => {
+                unimplemented!("昔之 IDENTIFIER 之 (INT_NUM|STRING_LITERAL|IDENTIFIER)")
+            }
+            lex::Lex::Zhe3 => match iter.next().ok_or(Error::UnexpectedEOF)? {
+                lex::Lex::Jin1Bu4Fu4Cun2Yi3 => unimplemented!("昔之 ... 者今不復存矣"),
+                lex::Lex::Jin1 => {
+                    if let lex::Lex::Qi2 = iter.peek().ok_or(Error::UnexpectedEOF)? {
+                        unimplemented!("昔之 ... 者今其是矣")
+                    } else {
+                        let data = parse_data(&mut iter)?;
+                        match iter.next().ok_or(Error::UnexpectedEOF)? {
+                            lex::Lex::Zhi1 => unimplemented!("昔之 ... 者今data之INT_NUM是矣"),
+                            lex::Lex::Shi4Yi3 => {
+                                return Ok(Statement::Assign {
+                                    ident: Identifier(ident.clone()),
+                                    data,
+                                })
+                            }
+                            _ => return Err(Error::SomethingWentWrong),
+                        }
+                    }
+                }
+                _ => return Err(Error::SomethingWentWrong),
+            },
+            _ => return Err(Error::SomethingWentWrong),
+        }
+    } else {
+        return Err(Error::SomethingWentWrong);
+    }
+}
+
 fn parse_statement(
     mut iter: &mut peek_nth::PeekableNth<std::slice::Iter<'_, lex::Lex>>,
 ) -> Result<Statement, Error> {
@@ -154,96 +248,11 @@ fn parse_statement(
             return parse_init_define_statement_after_you3(&mut iter);
         }
         lex::Lex::Wei2Shi4 => {
-            let next = iter.next().ok_or(Error::UnexpectedEOF)?;
-            match next {
-                lex::Lex::IntNum(num) => match iter.next().ok_or(Error::UnexpectedEOF)? {
-                    lex::Lex::Bian4 => {
-                        let mut inner = vec![];
-                        loop {
-                            if iter.peek() == Some(&&lex::Lex::Yun2Yun2) {
-                                iter.next();
-                                break;
-                            }
-
-                            inner.push(parse_statement(&mut iter)?);
-                        }
-                        return Ok(Statement::ForEnum {
-                            num: interpret_intnum(num),
-                            statements: inner,
-                        });
-                    }
-                    _ => return Err(Error::SomethingWentWrong),
-                },
-                lex::Lex::Identifier(ident) => match iter.next().ok_or(Error::UnexpectedEOF)? {
-                    lex::Lex::Bian4 => {
-                        let mut inner = vec![];
-                        loop {
-                            if iter.peek() == Some(&&lex::Lex::Yun2Yun2) {
-                                iter.next();
-                                break;
-                            }
-
-                            inner.push(parse_statement(&mut iter)?);
-                        }
-                        return Ok(Statement::ForEnumIdent {
-                            ident: Identifier(ident.to_string()),
-                            statements: inner,
-                        });
-                    }
-                    _ => return Err(Error::SomethingWentWrong),
-                },
-                _ => return Err(Error::SomethingWentWrong),
-            }
+            return parse_for_enum_statement_after_wei2shi4(&mut iter);
         }
         lex::Lex::Shu1Zhi1 => return Ok(Statement::Print),
         lex::Lex::Xi1Zhi1 => {
-            // '昔之' IDENTIFIER
-            // (
-            //     '之' (INT_NUM|STRING_LITERAL|IDENTIFIER)
-            // )? '者'
-            // (
-            //     (
-            //         '今'
-            //          (
-            //              (data ('之' INT_NUM)?)|'其'
-            //          ) '是矣'
-            //     ) |
-            //     '今不復存矣'
-            // ) ;
-
-            if let lex::Lex::Identifier(ident) = iter.next().ok_or(Error::UnexpectedEOF)? {
-                match iter.next().ok_or(Error::UnexpectedEOF)? {
-                    lex::Lex::Zhi1 => {
-                        unimplemented!("昔之 IDENTIFIER 之 (INT_NUM|STRING_LITERAL|IDENTIFIER)")
-                    }
-                    lex::Lex::Zhe3 => match iter.next().ok_or(Error::UnexpectedEOF)? {
-                        lex::Lex::Jin1Bu4Fu4Cun2Yi3 => unimplemented!("昔之 ... 者今不復存矣"),
-                        lex::Lex::Jin1 => match iter.peek().ok_or(Error::UnexpectedEOF)? {
-                            lex::Lex::Qi2 => unimplemented!("昔之 ... 者今其是矣"),
-                            _ => {
-                                let data = parse_data(&mut iter)?;
-
-                                match iter.next().ok_or(Error::UnexpectedEOF)? {
-                                    lex::Lex::Zhi1 => {
-                                        unimplemented!("昔之 ... 者今data之INT_NUM是矣")
-                                    }
-                                    lex::Lex::Shi4Yi3 => {
-                                        return Ok(Statement::Assign {
-                                            ident: Identifier(ident.clone()),
-                                            data,
-                                        })
-                                    }
-                                    _ => return Err(Error::SomethingWentWrong),
-                                }
-                            }
-                        },
-                        _ => return Err(Error::SomethingWentWrong),
-                    },
-                    _ => return Err(Error::SomethingWentWrong),
-                }
-            } else {
-                return Err(Error::SomethingWentWrong);
-            }
+            return parse_assign_after_xi1zhi1(&mut iter);
         }
         lex::Lex::Wu2You3 => {
             let next = iter.next().ok_or(Error::UnexpectedEOF)?;
