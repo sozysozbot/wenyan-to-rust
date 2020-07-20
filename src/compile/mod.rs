@@ -132,6 +132,49 @@ fn compile_dataorqi2(env: &Env, data1: &parse::DataOrQi2) -> String {
     }
 }
 
+fn compile_forenum(env: &Env, num: i64, statements: &[parse::Statement]) -> String {
+    let mut inner = String::new();
+    let mut new_env = Env {
+        indent_level: env.indent_level + 1,
+        rand_counter: env.rand_counter,
+        ans_counter: env.ans_counter,
+        ident_map: env.ident_map.clone(),
+
+        /// shu1zhi1_reference must be inherited, since in the original compiler
+        ///
+        /// ```
+        /// 吾有二言。曰「「天地。」」。
+        /// 為是三遍。
+        /// 書之。
+        /// 吾有一言。曰「「問天地好在。」」。書之。
+        /// 云云。
+        /// ```
+        ///
+        /// is translated into
+        ///
+        /// ```
+        /// var _ans1 = "天地。";
+        /// var _ans2 = "";
+        /// for (let _rand1 = 0; _rand1 < 3; _rand1++) {
+        ///   console.log(_ans1, _ans2);
+        ///   var _ans3 = "問天地好在。";
+        ///   console.log(_ans3);
+        /// };
+        /// ```
+        shu1zhi1_reference: env.shu1zhi1_reference.clone(),
+    };
+    for st in statements {
+        inner.push_str(&compile_statement(&mut new_env, &st));
+    }
+    return format!(
+        "{}for _ in 0..{} {{\n{}{}}}\n",
+        "    ".repeat(env.indent_level),
+        num,
+        inner,
+        "    ".repeat(env.indent_level),
+    );
+}
+
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
     let mut ans = String::new();
     match st {
@@ -240,46 +283,7 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
             ans = compile_define(&mut env, decl, &idents);
         }
         parse::Statement::ForEnum { num, statements } => {
-            let mut inner = String::new();
-            let mut new_env = Env {
-                indent_level: env.indent_level + 1,
-                rand_counter: env.rand_counter,
-                ans_counter: env.ans_counter,
-                ident_map: env.ident_map.clone(),
-
-                /// shu1zhi1_reference must be inherited, since in the original compiler
-                ///
-                /// ```
-                /// 吾有二言。曰「「天地。」」。
-                /// 為是三遍。
-                /// 書之。
-                /// 吾有一言。曰「「問天地好在。」」。書之。
-                /// 云云。
-                /// ```
-                ///
-                /// is translated into
-                ///
-                /// ```
-                /// var _ans1 = "天地。";
-                /// var _ans2 = "";
-                /// for (let _rand1 = 0; _rand1 < 3; _rand1++) {
-                ///   console.log(_ans1, _ans2);
-                ///   var _ans3 = "問天地好在。";
-                ///   console.log(_ans3);
-                /// };
-                /// ```
-                shu1zhi1_reference: env.shu1zhi1_reference.clone(),
-            };
-            for st in statements {
-                inner.push_str(&compile_statement(&mut new_env, &st));
-            }
-            ans = format!(
-                "{}for _ in 0..{} {{\n{}{}}}\n",
-                "    ".repeat(env.indent_level),
-                num,
-                inner,
-                "    ".repeat(env.indent_level),
-            );
+            ans = compile_forenum(&env, *num, &statements);
         }
 
         parse::Statement::ForEnumIdent { ident, statements } => {
