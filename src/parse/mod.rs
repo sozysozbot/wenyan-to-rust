@@ -8,7 +8,7 @@ pub enum Statement {
         statements: Vec<Statement>,
     },
     ForEnumIdent {
-       ident: Identifier,
+        ident: Identifier,
         statements: Vec<Statement>,
     },
     InitDefine {
@@ -91,55 +91,59 @@ fn parse_data(
     }
 }
 
+fn parse_init_define_statement_after_you3(
+    mut iter: &mut peek_nth::PeekableNth<std::slice::Iter<'_, lex::Lex>>,
+) -> Result<Statement, Error> {
+    if let lex::Lex::Type(t) = iter.next().ok_or(Error::UnexpectedEOF)? {
+        let data = parse_data(&mut iter)?;
+        // According to https://wy-lang.org/spec.html#init_define_statement
+        //  '有' TYPE data (name_single_statement)?
+        // and thus name_single_statement seems optional.
+        // However,
+        //
+        // ```
+        // 有數一。
+        // ```
+        //
+        // fails to compile and gives the message "TypeError: a.names is undefined".
+        // Hence for now I will assume the name_single_statement part obligatory, unless I find any counterexamples.
+
+        let next = iter.next();
+        match next {
+            None => panic!("If this message is obtained by a wenyan program that successfully compiles in the original edition, please submit an issue."),
+            Some(lex::Lex::Ming2Zhi1) => {
+                let next = iter.next();
+                match next.ok_or(Error::UnexpectedEOF)? {
+                    lex::Lex::Yue1 => {
+                        let next = iter.next();
+                        match next.ok_or(Error::UnexpectedEOF)? {
+                            lex::Lex::Identifier(ident) => {
+                                return Ok(Statement::InitDefine {
+                                    type_: *t,
+                                    name: Identifier(ident.to_string()),
+                                    data
+                                })
+                            }
+                            _ => return Err(Error::UnresolvableTokens),
+                        }
+                    }
+                    _ => return Err(Error::UnresolvableTokens),
+                }
+            }
+            _ => panic!("If this message is obtained by a wenyan program that successfully compiles in the original edition, please submit an issue."),
+        }
+    } else {
+        return Err(Error::UnresolvableTokens);
+    }
+}
+
 fn parse_statement(
     mut iter: &mut peek_nth::PeekableNth<std::slice::Iter<'_, lex::Lex>>,
 ) -> Result<Statement, Error> {
     let token = iter.next().ok_or(Error::UnexpectedEOF)?;
     match token {
         lex::Lex::You3 => {
-            let next = iter.next();
-            match next.ok_or(Error::UnexpectedEOF)? {
-                lex::Lex::Type(t) => {
-                    let data = parse_data(&mut iter)?;
-                    // According to https://wy-lang.org/spec.html#init_define_statement
-                    //  '有' TYPE data (name_single_statement)?
-                    // and thus name_single_statement seems optional.
-                    // However,
-                    //
-                    // ```
-                    // 有數一。
-                    // ```
-                    //
-                    // fails to compile and gives the message "TypeError: a.names is undefined".
-                    // Hence for now I will assume the name_single_statement part obligatory, unless I find any counterexamples.
-
-                    let next = iter.next();
-                    match next {
-                        None => panic!("If this message is obtained by a wenyan program that successfully compiles in the original edition, please submit an issue."),
-                        Some(lex::Lex::Ming2Zhi1) => {
-                            let next = iter.next();
-                            match next.ok_or(Error::UnexpectedEOF)? {
-                                lex::Lex::Yue1 => {
-                                    let next = iter.next();
-                                    match next.ok_or(Error::UnexpectedEOF)? {
-                                        lex::Lex::Identifier(ident) => {
-                                            return Ok(Statement::InitDefine {
-                                                type_: *t,
-                                                name: Identifier(ident.to_string()),
-                                                data
-                                            })
-                                        }
-                                        _ => return Err(Error::UnresolvableTokens),
-                                    }
-                                }
-                                _ => return Err(Error::UnresolvableTokens),
-                            }
-                        }
-                        _ => panic!("If this message is obtained by a wenyan program that successfully compiles in the original edition, please submit an issue."),
-                    }
-                }
-                _ => return Err(Error::UnresolvableTokens),
-            }
+            return parse_init_define_statement_after_you3(&mut iter);
         }
         lex::Lex::Wei2Shi4 => {
             let next = iter.next().ok_or(Error::UnexpectedEOF)?;
