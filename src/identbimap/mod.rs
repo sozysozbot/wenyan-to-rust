@@ -21,9 +21,9 @@ type Hanzi = parse::Identifier;
 type Ascii = String;
 
 #[derive(Clone)]
-pub struct IdentBiMap{
+pub struct IdentBiMap {
     bimap: BiMap<Hanzi, Ascii>,
-    mutable_idents: HashSet<Hanzi>
+    mutable_idents: HashSet<Hanzi>,
 }
 
 impl IdentBiMap {
@@ -36,9 +36,9 @@ impl IdentBiMap {
     }
 
     pub fn new(parsed: &Vec<parse::Statement>, conversion_table: &HashMap<String, String>) -> Self {
-        let mut ans = IdentBiMap{ 
+        let mut ans = IdentBiMap {
             bimap: BiMap::new(),
-            mutable_idents: HashSet::new()
+            mutable_idents: HashSet::new(),
         };
         for st in parsed {
             ans.insert_stmt(&st, &conversion_table);
@@ -81,6 +81,16 @@ impl IdentBiMap {
 
     fn insert_stmt(&mut self, st: &parse::Statement, conversion_table: &HashMap<String, String>) {
         match st {
+            parse::Statement::Math {
+                math: parse::MathKind::ArithBinaryMath(_, data1, _, data2),
+            } => {
+                if let parse::DataOrQi2::Data(d1) = data1 {
+                    self.insert_dat(d1, &conversion_table);
+                }
+                if let parse::DataOrQi2::Data(d2) = data2 {
+                    self.insert_dat(d2, &conversion_table);
+                }
+            }
             parse::Statement::Assign { ident, data } => {
                 self.insert_ident(ident.clone(), &conversion_table);
                 self.mutable_idents.insert(ident.clone());

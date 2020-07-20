@@ -23,7 +23,10 @@ pub enum Statement {
     // Function,
     // If,
     // Return,
-    // Math,
+    Math {
+        math: MathKind,
+        // name_multi: Vec<Identifier>, // FIXME
+    },
     Assign {
         ident: Identifier,
         data: Data,
@@ -35,6 +38,18 @@ pub enum Statement {
     // Flush,
     // Break,
     // Comment,
+}
+
+//#[derive(Debug)]
+//pub enum LogicBinaryOp {
+//}
+
+#[derive(Debug)]
+pub enum MathKind {
+    ArithBinaryMath(lex::ArithBinaryOp, DataOrQi2, lex::Preposition, DataOrQi2),
+    // ArithUnaryMath,
+    // BooleanAlgebra(Identifier, Identifier, LogicBinaryOp),
+    // ModMath
 }
 
 #[derive(Debug)]
@@ -82,6 +97,44 @@ fn interpret_intnum(num: &lex::IntNum) -> i64 {
     }
 }
 
+#[derive(Debug)]
+pub enum DataOrQi2 {
+    Data(Data),
+    Qi2,
+}
+
+fn parse_data_or_qi2(
+    iter: &mut peek_nth::PeekableNth<std::slice::Iter<'_, lex::Lex>>,
+) -> Result<DataOrQi2, Error> {
+    let token = match iter.next() {
+        None => return Err(Error::UnexpectedEOF),
+        Some(a) => a,
+    };
+
+    match token {
+        lex::Lex::StringLiteral(strlit) => {
+            Ok(DataOrQi2::Data(Data::StringLiteral(strlit.to_string())))
+        }
+        lex::Lex::BoolValue(bv) => Ok(DataOrQi2::Data(Data::BoolValue(bv.interpret()))),
+        lex::Lex::Identifier(ident) => Ok(DataOrQi2::Data(Data::Identifier(Identifier(
+            ident.to_string(),
+        )))),
+        lex::Lex::IntNum(intnum) => Ok(DataOrQi2::Data(Data::IntNum(interpret_intnum(intnum)))), /* FIXME: must handle float */
+        lex::Lex::Qi2 => Ok(DataOrQi2::Qi2),
+        _ => return Err(Error::SomethingWentWrong),
+    }
+}
+
+fn parse_preposition(
+    iter: &mut peek_nth::PeekableNth<std::slice::Iter<'_, lex::Lex>>,
+) -> Result<lex::Preposition, Error> {
+    match iter.next() {
+        None => return Err(Error::UnexpectedEOF),
+        Some(lex::Lex::Preposition(p)) => return Ok(*p),
+        _ => return Err(Error::SomethingWentWrong),
+    }
+}
+
 fn parse_data(
     iter: &mut peek_nth::PeekableNth<std::slice::Iter<'_, lex::Lex>>,
 ) -> Result<Data, Error> {
@@ -95,7 +148,7 @@ fn parse_data(
         lex::Lex::BoolValue(bv) => Ok(Data::BoolValue(bv.interpret())),
         lex::Lex::Identifier(ident) => Ok(Data::Identifier(Identifier(ident.to_string()))),
         lex::Lex::IntNum(intnum) => Ok(Data::IntNum(interpret_intnum(intnum))), /* FIXME: must handle float */
-        _ => unimplemented!(),
+        _ => return Err(Error::SomethingWentWrong),
     }
 }
 
@@ -244,6 +297,16 @@ fn parse_statement(
 ) -> Result<Statement, Error> {
     let token = iter.next().ok_or(Error::UnexpectedEOF)?;
     match token {
+        lex::Lex::ArithBinaryOp(op) => {
+            let data1 = parse_data_or_qi2(&mut iter)?;
+            let prep = parse_preposition(&mut iter)?;
+            let data2 = parse_data_or_qi2(&mut iter)?;
+
+            return Ok(Statement::Math {
+                math: MathKind::ArithBinaryMath(*op, data1, prep, data2),
+                // name_multi: vec![], // FIXME TODO
+            });
+        }
         lex::Lex::You3 => {
             return parse_init_define_statement_after_you3(&mut iter);
         }
@@ -305,8 +368,8 @@ fn parse_statement(
                                             } else {
                                                 return Err(Error::SomethingWentWrong);
                                             }
-                                        },
-                                        _ => break
+                                        }
+                                        _ => break,
                                     }
                                 }
 

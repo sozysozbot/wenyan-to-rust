@@ -105,11 +105,11 @@ fn compile_define(
                 ans.push_str(&format!(
                     "{}let {}{} = {};\n",
                     "    ".repeat(env.indent_level),
-                    if env.ident_map.is_mutable(&ident) { 
+                    if env.ident_map.is_mutable(&ident) {
                         "mut "
-                    } else { 
+                    } else {
                         ""
-                     },
+                    },
                     env.ident_map.translate_from_hanzi(&ident),
                     compile_optional_literal(&env, data_arr.get(i), *type_)
                 ));
@@ -124,6 +124,80 @@ fn compile_define(
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
     let mut ans = String::new();
     match st {
+        parse::Statement::Math {
+            math: parse::MathKind::ArithBinaryMath(op, data1, prep, data2),
+        } => {
+            // 吾有三數。曰三曰五曰二名之曰「甲」。加其以五。
+            // is to be translated as
+            // ```
+            // var 甲 = 3;
+            // var _ans1 = 5;
+            // var _ans2 = 2;
+            // const _ans3 = _ans2 + 5;
+            // ```
+
+            // 加其以五。書之。
+            // is to be translated as
+            // ```
+            // const _ans1 = undefined + 5;
+            // console.log(_ans1);
+            // ```
+
+            match prep {
+                &lex::Preposition::Yi3 => {
+                    env.ans_counter += 1;
+                    ans.push_str(&format!(
+                        "{}let _ans{} = {} {} {};\n",
+                        "    ".repeat(env.indent_level),
+                        env.ans_counter,
+                        match data1 {
+                            parse::DataOrQi2::Qi2 => env
+                                .shu1zhi1_reference
+                                .last()
+                                .unwrap_or(&"f64::NAN".to_string())
+                                .to_string(),
+                            parse::DataOrQi2::Data(data) => compile_literal(&env, data),
+                        },
+                        op.to_str(),
+                        match data2 {
+                            parse::DataOrQi2::Qi2 => env
+                                .shu1zhi1_reference
+                                .last()
+                                .unwrap_or(&"f64::NAN".to_string())
+                                .to_string(),
+                            parse::DataOrQi2::Data(data) => compile_literal(&env, data),
+                        },
+                    ));
+                    env.shu1zhi1_reference = vec![format!("_ans{}", env.ans_counter)];
+                }
+                &lex::Preposition::Yu2 => {
+                    env.ans_counter += 1;
+                    ans.push_str(&format!(
+                        "{}let _ans{} = {} {} {};\n",
+                        "    ".repeat(env.indent_level),
+                        env.ans_counter,
+                        match data2 {
+                            parse::DataOrQi2::Qi2 => env
+                                .shu1zhi1_reference
+                                .last()
+                                .unwrap_or(&"f64::NAN".to_string())
+                                .to_string(),
+                            parse::DataOrQi2::Data(data) => compile_literal(&env, data),
+                        },
+                        op.to_str(),
+                        match data1 {
+                            parse::DataOrQi2::Qi2 => env
+                                .shu1zhi1_reference
+                                .last()
+                                .unwrap_or(&"f64::NAN".to_string())
+                                .to_string(),
+                            parse::DataOrQi2::Data(data) => compile_literal(&env, data),
+                        },
+                    ));
+                    env.shu1zhi1_reference = vec![format!("_ans{}", env.ans_counter)];
+                }
+            }
+        }
         parse::Statement::Declare(parse::DeclareStatement {
             how_many_variables,
             type_,
@@ -169,11 +243,11 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
             ans = format!(
                 "{}let {}{} = {};\n",
                 "    ".repeat(env.indent_level),
-                if env.ident_map.is_mutable(&name) { 
+                if env.ident_map.is_mutable(&name) {
                     "mut "
-                } else { 
+                } else {
                     ""
-                 },
+                },
                 env.ident_map.translate_from_hanzi(&name),
                 compile_optional_literal(&env, Some(data), *type_)
             );

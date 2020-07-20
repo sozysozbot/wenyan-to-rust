@@ -73,12 +73,46 @@ pub enum Lex {
     /// 是謂
     Shi4Wei4,
 
+    /// 以施
+    Yi3Shi1,
+
+    ArithBinaryOp(ArithBinaryOp),
+
     Type(Type),
     StringLiteral(String),
     BoolValue(BoolValue),
     Identifier(String),
     IntNum(IntNum),
     FloatNumKeywords(FloatNumKeywords),
+    Preposition(Preposition),
+}
+
+#[derive(Eq, PartialEq, Debug, Clone, Copy)]
+pub enum ArithBinaryOp {
+    /// 加
+    Jia1,
+    /// 減
+    Jian3,
+    /// 乘
+    Cheng2,
+}
+
+impl ArithBinaryOp {
+    pub fn to_str(self) -> &'static str {
+        match self {
+            ArithBinaryOp::Jia1 => "+",
+            ArithBinaryOp::Jian3 => "-",
+            ArithBinaryOp::Cheng2 => "*",
+        }
+    }
+}
+
+#[derive(Eq, PartialEq, Debug, Clone, Copy)]
+pub enum Preposition {
+    /// 於
+    Yu2,
+    /// 以
+    Yi3,
 }
 
 #[derive(Eq, PartialEq, Debug, Clone)]
@@ -316,6 +350,10 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
         }
 
         ans.push(match c {
+            '於' => Lex::Preposition(Preposition::Yu2),
+            '加' => Lex::ArithBinaryOp(ArithBinaryOp::Jia1),
+            '減' => Lex::ArithBinaryOp(ArithBinaryOp::Jian3),
+            '乘' => Lex::ArithBinaryOp(ArithBinaryOp::Cheng2),
             '有' => Lex::You3,
             '數' => Lex::Type(Type::Shu4),
             '列' => Lex::Type(Type::Lie4),
@@ -341,6 +379,13 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
             },
             '書' => two_char_keyword(&mut iter, '書', '之', Lex::Shu1Zhi1)?,
             '名' => two_char_keyword(&mut iter, '名', '之', Lex::Ming2Zhi1)?,
+            '以' => match iter.peek() {
+                Some('施') => {
+                    iter.next();
+                    Lex::Yi3Shi1
+                }
+                _ => Lex::Preposition(Preposition::Yi3),
+            },
             '之' => match iter.peek() {
                 Some('書') => {
                     iter.next();
