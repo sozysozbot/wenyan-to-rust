@@ -10,11 +10,11 @@ mod parse;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs::File;
     use serde_json;
+    use std::fs::File;
     fn test(s: &str) {
         let pinyin_json = include_str!("hanzi2roman-map-pinyin.json");
-        let conversion_table: HashMap<String, String> =  serde_json::from_str(pinyin_json).unwrap();
+        let conversion_table: HashMap<String, String> = serde_json::from_str(pinyin_json).unwrap();
 
         let mut file = File::open(format!("{}.wy", s)).unwrap();
         let mut contents = String::new();
@@ -49,8 +49,8 @@ mod tests {
     }
 }
 
-use std::include_str;
 use std::collections::HashMap;
+use std::include_str;
 fn main() -> std::io::Result<()> {
     let matches = App::new("wenyan-to-rust")
         .version("0.1.0")
@@ -81,7 +81,7 @@ fn main() -> std::io::Result<()> {
     let config = matches.value_of("config").unwrap_or("default.conf");
 
     let pinyin_json = include_str!("hanzi2roman-map-pinyin.json");
-    let conversion_table: HashMap<String, String> =  serde_json::from_str(pinyin_json)?;
+    let conversion_table: HashMap<String, String> = serde_json::from_str(pinyin_json)?;
 
     let verbose_level = matches.occurrences_of("v");
 
