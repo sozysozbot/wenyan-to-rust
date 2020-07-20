@@ -197,32 +197,24 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
             // console.log(_ans1);
             // ```
 
-            match prep {
-                &lex::Preposition::Yi3 => {
-                    env.ans_counter += 1;
-                    ans.push_str(&format!(
-                        "{}let _ans{} = {} {} {};\n",
-                        "    ".repeat(env.indent_level),
-                        env.ans_counter,
-                        compile_dataorqi2(&env, data1),
-                        op.to_str(),
-                        compile_dataorqi2(&env, data2),
-                    ));
-                    env.shu1zhi1_reference = vec![format!("_ans{}", env.ans_counter)];
-                }
-                &lex::Preposition::Yu2 => {
-                    env.ans_counter += 1;
-                    ans.push_str(&format!(
-                        "{}let _ans{} = {} {} {};\n",
-                        "    ".repeat(env.indent_level),
-                        env.ans_counter,
-                        compile_dataorqi2(&env, data2),
-                        op.to_str(),
-                        compile_dataorqi2(&env, data1),
-                    ));
-                    env.shu1zhi1_reference = vec![format!("_ans{}", env.ans_counter)];
-                }
-            }
+            let left = match prep {
+                &lex::Preposition::Yi3 => data1,
+                &lex::Preposition::Yu2 => data2,
+            };
+            let right = match prep {
+                &lex::Preposition::Yi3 => data2,
+                &lex::Preposition::Yu2 => data1,
+            };
+            env.ans_counter += 1;
+            ans.push_str(&format!(
+                "{}let _ans{} = {} {} {};\n",
+                "    ".repeat(env.indent_level),
+                env.ans_counter,
+                compile_dataorqi2(&env, left),
+                op.to_str(),
+                compile_dataorqi2(&env, right),
+            ));
+            env.shu1zhi1_reference = vec![format!("_ans{}", env.ans_counter)];
         }
         parse::Statement::Declare(parse::DeclareStatement {
             how_many_variables,
@@ -287,38 +279,46 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
         }
 
         parse::Statement::ForEnumIdent { ident, statements } => {
-            let mut inner = String::new();
-            env.rand_counter += 1;
-            let rand_n = env.rand_counter;
-            let mut new_env = Env {
-                indent_level: env.indent_level + 1,
-                ans_counter: env.ans_counter,
-                rand_counter: env.rand_counter,
-                ident_map: env.ident_map.clone(),
-
-                // shu1zhi1_reference must be inherited
-                shu1zhi1_reference: env.shu1zhi1_reference.clone(),
-            };
-            for st in statements {
-                inner.push_str(&compile_statement(&mut new_env, &st));
-            }
-
-            ans = format!(
-                "{}let mut _rand{} = 0.0;\n{}while _rand{} < {} {{\n{}{}_rand{} += 1.0;\n{}}}\n",
-                "    ".repeat(env.indent_level),
-                rand_n,
-                "    ".repeat(env.indent_level),
-                rand_n,
-                env.ident_map.translate_from_hanzi(&ident),
-                inner,
-                "    ".repeat(env.indent_level + 1),
-                rand_n,
-                "    ".repeat(env.indent_level),
-            );
+            ans = compile_forenum_ident(&mut env, ident, statements);
         }
     }
 
     ans
+}
+
+fn compile_forenum_ident(
+    env: &mut Env,
+    ident: &parse::Identifier,
+    statements: &[parse::Statement],
+) -> String {
+    let mut inner = String::new();
+    env.rand_counter += 1;
+    let rand_n = env.rand_counter;
+    let mut new_env = Env {
+        indent_level: env.indent_level + 1,
+        ans_counter: env.ans_counter,
+        rand_counter: env.rand_counter,
+        ident_map: env.ident_map.clone(),
+
+        // shu1zhi1_reference must be inherited
+        shu1zhi1_reference: env.shu1zhi1_reference.clone(),
+    };
+    for st in statements {
+        inner.push_str(&compile_statement(&mut new_env, &st));
+    }
+
+    return format!(
+        "{}let mut _rand{} = 0.0;\n{}while _rand{} < {} {{\n{}{}_rand{} += 1.0;\n{}}}\n",
+        "    ".repeat(env.indent_level),
+        rand_n,
+        "    ".repeat(env.indent_level),
+        rand_n,
+        env.ident_map.translate_from_hanzi(&ident),
+        inner,
+        "    ".repeat(env.indent_level + 1),
+        rand_n,
+        "    ".repeat(env.indent_level),
+    );
 }
 
 use std::collections::HashMap;
