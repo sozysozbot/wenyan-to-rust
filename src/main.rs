@@ -100,6 +100,11 @@ mod tests {
     fn test014() {
         test("test014")
     }
+
+    #[test]
+    fn test015() {
+        test("test015")
+    }
 }
 
 use std::collections::HashMap;

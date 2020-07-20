@@ -295,19 +295,18 @@ fn parse_statement(
                                 let mut idents = vec![];
 
                                 loop {
-                                    if let lex::Lex::Yue1 =
-                                        iter.peek().ok_or(Error::UnexpectedEOF)?
-                                    {
-                                        iter.next();
-                                        if let lex::Lex::Identifier(ident) =
-                                            iter.next().ok_or(Error::UnexpectedEOF)?
-                                        {
-                                            idents.push(Identifier(ident.clone()));
-                                        } else {
-                                            return Err(Error::SomethingWentWrong);
-                                        }
-                                    } else {
-                                        break;
+                                    match iter.peek() {
+                                        Some(lex::Lex::Yue1) => {
+                                            iter.next();
+                                            if let lex::Lex::Identifier(ident) =
+                                                iter.next().ok_or(Error::UnexpectedEOF)?
+                                            {
+                                                idents.push(Identifier(ident.clone()));
+                                            } else {
+                                                return Err(Error::SomethingWentWrong);
+                                            }
+                                        },
+                                        _ => break
                                     }
                                 }
 
