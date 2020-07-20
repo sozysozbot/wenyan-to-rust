@@ -7,7 +7,7 @@ fn main() {
     let BING3 = 9.0;
     let _ans3 = 7.0;
     println!("{}", _ans3);
-    let DING1 ZHENG1 = 3.0;
+    let DING1 = 3.0;
     let WU4 = 9.0;
     let JI3 = 7.0;
     println!("");

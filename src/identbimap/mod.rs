@@ -7,12 +7,12 @@ fn to_pinyin(ident: parse::Identifier, conversion_table: &HashMap<String, String
     let parse::Identifier(i) = ident;
     let vec = i
         .chars()
-        .map(|c| {
-            conversion_table
-                .get(&format!("{:X}", c as u32).to_string())
-                .unwrap_or(&"_".to_string())
-                .to_string()
-        })
+        .map(
+            |c| match conversion_table.get(&format!("{:X}", c as u32).to_string()) {
+                None => "_".to_string(),
+                Some(a) => a.split(" ").collect::<Vec<_>>()[0].to_string(),
+            },
+        )
         .collect::<Vec<_>>();
     vec.join("")
 }
