@@ -1,9 +1,11 @@
 #![warn(clippy::pedantic)]
+#![allow(clippy::non_ascii_literal)]
 use std::fs::File;
 use std::io::prelude::*;
 extern crate clap;
 use clap::{App, Arg};
 mod compile;
+mod identbimap;
 mod lex;
 mod parse;
 
@@ -92,6 +94,11 @@ mod tests {
     #[test]
     fn test013() {
         test("test013")
+    }
+
+    #[test]
+    fn test014() {
+        test("test014")
     }
 }
 
