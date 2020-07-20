@@ -13,7 +13,6 @@ fn compile_optional_literal(
     env: &Env,
     lit: Option<&parse::Data>,
     default_type: lex::Type,
-    conversion_table: &HashMap<String, String>,
 ) -> String {
     match lit {
         None => match default_type {
@@ -22,11 +21,11 @@ fn compile_optional_literal(
             lex::Type::Yan2 => "\"\"".to_string(),
             lex::Type::Yao2 => "false".to_string(),
         },
-        Some(v) => compile_literal(&env, v, &conversion_table),
+        Some(v) => compile_literal(&env, v),
     }
 }
 
-fn compile_literal(env: &Env, v: &parse::Data, conversion_table: &HashMap<String, String>) -> String {
+fn compile_literal(env: &Env, v: &parse::Data) -> String {
     match v.clone() {
         parse::Data::BoolValue(true) => "true".to_string(),
         parse::Data::BoolValue(false) => "false".to_string(),
@@ -98,7 +97,7 @@ fn compile_define(
                     "{}let _ans{} = {};\n",
                     "    ".repeat(env.indent_level),
                     env.ans_counter,
-                    compile_optional_literal(&env, data_arr.get(i), *type_, &conversion_table)
+                    compile_optional_literal(&env, data_arr.get(i), *type_)
                 ));
                 new_shu1zhi1.push(format!("_ans{}", env.ans_counter));
             }
@@ -107,7 +106,7 @@ fn compile_define(
                     "{}let {} = {};\n",
                     "    ".repeat(env.indent_level),
                     env.ident_map.get_by_left(&ident).unwrap(),
-                    compile_optional_literal(&env, data_arr.get(i), *type_, &conversion_table)
+                    compile_optional_literal(&env, data_arr.get(i), *type_)
                 ));
             }
         }
@@ -136,7 +135,7 @@ fn compile_statement(
                     "{}let _ans{} = {};\n",
                     "    ".repeat(env.indent_level),
                     env.ans_counter,
-                    compile_optional_literal(&env, data_arr.get(i), *type_, &conversion_table)
+                    compile_optional_literal(&env, data_arr.get(i), *type_)
                 ));
                 new_shu1zhi1.push(format!("_ans{}", env.ans_counter));
             }
@@ -162,7 +161,7 @@ fn compile_statement(
                 "{}{} = {}; // error[E0384]: cannot assign twice to immutable variable\n",
                 "    ".repeat(env.indent_level),
                 env.ident_map.get_by_left(&ident).unwrap(),
-                compile_literal(&env, data, &conversion_table)
+                compile_literal(&env, data)
             )
         }
         parse::Statement::InitDefine { type_, data, name } => {
@@ -170,7 +169,7 @@ fn compile_statement(
                 "{}let {} = {};\n",
                 "    ".repeat(env.indent_level),
                 env.ident_map.get_by_left(&name).unwrap(),
-                compile_optional_literal(&env, Some(data), *type_, &conversion_table)
+                compile_optional_literal(&env, Some(data), *type_)
             );
             env.shu1zhi1_reference = vec![];
         }
