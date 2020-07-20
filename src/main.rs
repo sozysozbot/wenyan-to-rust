@@ -88,6 +88,11 @@ mod tests {
     fn test012() {
         test("test012")
     }
+
+    #[test]
+    fn test013() {
+        test("test013")
+    }
 }
 
 use std::collections::HashMap;
