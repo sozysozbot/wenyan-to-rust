@@ -38,12 +38,12 @@ fn compile_statement(
     let mut ans = String::new();
     match st {
         parse::Statement::Declare(parse::DeclareStatement {
-            int_num,
+            how_many_variables,
             type_,
             data_arr,
         }) => {
             let mut new_shu1zhi1 = vec![];
-            for i in 0..*int_num {
+            for i in 0..*how_many_variables {
                 env.ans_counter += 1;
                 ans.push_str(&format!(
                     "{}let _ans{} = {};\n",
@@ -78,6 +78,79 @@ fn compile_statement(
                 compile_literal(Some(data), *type_, &conversion_table)
             );
             env.shu1zhi1_reference = vec![];
+        }
+        parse::Statement::Define { decl: parse::DeclareStatement {
+            how_many_variables,
+            type_,
+            data_arr,
+        }, idents } => {
+            // It is possible to have three conflicting information on the number of variables declared.
+            // Let's say we have `吾有三數。曰三。曰九。名之曰「庚」。曰「辛」。曰「壬」。曰「癸」。書之。`
+            // Then `how_many_variables` is  `3`, `type_` is `Type::Shu4`, `data_arr` is `vec![3, 9]` and `idents` are the idents.
+            // This compiles to 
+            // ```
+            // var 庚 = 3;
+            // var 辛 = 9;
+            // var 壬 = 0;
+            // console.log();
+            // ```
+
+            // `吾有三數。曰三。曰九。曰二十七。名之曰「甲」。書之。` becomes
+            // ```
+            // var 甲 = 3;
+            // var _ans1 = 9;
+            // var _ans2 = 27;
+            // console.log(_ans1, _ans2);
+            // ```
+
+            // `吾有三數。曰三。曰九。曰二十七。名之曰「乙」。曰「丙」。書之。` is
+            // ```
+            // var 乙 = 3;
+            // var 丙 = 9;
+            // var _ans3 = 27;
+            // console.log(_ans3);
+            // ```
+
+            // and `吾有三數。曰三。曰九。曰二十七。名之曰「丁」。曰「戊」。曰「己」。書之。` is, naturally,
+            // ```
+            // var 丁 = 3;
+            // var 戊 = 9;
+            // var 己 = 27;
+            // console.log();
+            // ```
+
+            // Therefore, `how_many_variables` always determines how many variables are to be defined;
+            // `data_arr` is truncated or padded so that its length matches `how_many_variables`,
+            // `idents` fills the open spots,
+            // and remaining spots (if any) will be accessible by 書之 .
+            
+            let mut new_shu1zhi1 = vec![];
+            for i in 0..*how_many_variables {
+                match idents.get(i) {
+                    None => {
+                        // no more ident; ans_counter and shu1zhi1_reference come into play
+                        env.ans_counter += 1;
+                        ans.push_str(&format!(
+                            "{}let _ans{} = {};\n",
+                            "    ".repeat(env.indent_level),
+                            env.ans_counter,
+                            compile_literal(data_arr.get(i), *type_, &conversion_table)
+                        ));
+                        new_shu1zhi1.push(format!("_ans{}", env.ans_counter));
+                    }
+                    Some(ident) => {
+                        ans.push_str(&format!(
+                            "{}let {} = {};\n",
+                            "    ".repeat(env.indent_level),
+                            to_pinyin(ident.clone(), &conversion_table),
+                            compile_literal(data_arr.get(i), *type_, &conversion_table)
+                        ));
+                    }
+                }
+                
+            }
+            env.shu1zhi1_reference = new_shu1zhi1;
+            
         }
         parse::Statement::ForEnum { num, statements } => {
             let mut inner = String::new();

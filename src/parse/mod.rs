@@ -16,7 +16,10 @@ pub enum Statement {
         data: Data,
         name: Identifier,
     },
-    // Define,
+    Define {
+        decl: DeclareStatement,
+        idents: Vec<Identifier>,
+    },
     // Function,
     // If,
     // Return,
@@ -33,7 +36,7 @@ pub enum Statement {
 
 #[derive(Debug)]
 pub struct DeclareStatement {
-    pub int_num: usize,
+    pub how_many_variables: usize,
     pub type_: lex::Type,
     pub data_arr: Vec<Data>,
 }
@@ -206,20 +209,56 @@ fn parse_statement(
                                 ans.push(data);
                             };
 
-                            let interpret = match usize::try_from(interpret_intnum(num)) {
+                            let variable_count = match usize::try_from(interpret_intnum(num)) {
                                 Err(_) => return Err(Error::InvalidVariableCount),
                                 Ok(a) => a,
                             };
 
-                            if interpret == 0 {
+                            if variable_count == 0 {
                                 return Err(Error::InvalidVariableCount);
                             }
 
-                            return Ok(Statement::Declare(DeclareStatement {
-                                int_num: interpret as usize,
+                            let declare = DeclareStatement {
+                                how_many_variables: variable_count as usize,
                                 type_: *t,
                                 data_arr: vec,
-                            }));
+                            };
+
+                            if let Some(lex::Lex::Ming2Zhi1) = iter.peek() {
+                                iter.next();
+
+                                // ('曰' IDENTIFIER)+
+
+                                let mut idents = vec![];
+
+                                loop {
+                                    if let lex::Lex::Yue1 =
+                                        iter.peek().ok_or(Error::UnexpectedEOF)?
+                                    {
+                                        iter.next();
+                                        if let lex::Lex::Identifier(ident) =
+                                            iter.next().ok_or(Error::UnexpectedEOF)?
+                                        {
+                                            idents.push(Identifier(ident.clone()));
+                                        } else {
+                                            return Err(Error::UnresolvableTokens);
+                                        }
+                                    } else {
+                                        break;
+                                    }
+                                }
+
+                                if idents.is_empty() {
+                                    return Err(Error::UnresolvableTokens); // we need at least one 曰 now that we have seen 名之
+                                }
+
+                                return Ok(Statement::Define {
+                                    decl: declare,
+                                    idents: idents,
+                                });
+                            } else {
+                                return Ok(Statement::Declare(declare));
+                            }
                         }
                         _ => unimplemented!(), // 術, 物
                     }
