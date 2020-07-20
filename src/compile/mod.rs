@@ -79,15 +79,19 @@ fn compile_statement(
             );
             env.shu1zhi1_reference = vec![];
         }
-        parse::Statement::Define { decl: parse::DeclareStatement {
-            how_many_variables,
-            type_,
-            data_arr,
-        }, idents } => {
+        parse::Statement::Define {
+            decl:
+                parse::DeclareStatement {
+                    how_many_variables,
+                    type_,
+                    data_arr,
+                },
+            idents,
+        } => {
             // It is possible to have three conflicting information on the number of variables declared.
             // Let's say we have `吾有三數。曰三。曰九。名之曰「庚」。曰「辛」。曰「壬」。曰「癸」。書之。`
             // Then `how_many_variables` is  `3`, `type_` is `Type::Shu4`, `data_arr` is `vec![3, 9]` and `idents` are the idents.
-            // This compiles to 
+            // This compiles to
             // ```
             // var 庚 = 3;
             // var 辛 = 9;
@@ -123,7 +127,7 @@ fn compile_statement(
             // `data_arr` is truncated or padded so that its length matches `how_many_variables`,
             // `idents` fills the open spots,
             // and remaining spots (if any) will be accessible by 書之 .
-            
+
             let mut new_shu1zhi1 = vec![];
             for i in 0..*how_many_variables {
                 match idents.get(i) {
@@ -147,10 +151,8 @@ fn compile_statement(
                         ));
                     }
                 }
-                
             }
             env.shu1zhi1_reference = new_shu1zhi1;
-            
         }
         parse::Statement::ForEnum { num, statements } => {
             let mut inner = String::new();

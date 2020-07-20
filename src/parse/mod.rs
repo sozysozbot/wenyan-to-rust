@@ -73,7 +73,9 @@ fn interpret_intnum(num: &lex::IntNum) -> i64 {
         &[lex::IntNumKeywords::Qi1] => 7,
         &[lex::IntNumKeywords::Ba1] => 8,
         &[lex::IntNumKeywords::Jiu3] => 9,
-        _ => unimplemented!(),
+        &[lex::IntNumKeywords::Shi2] => 10,
+        &[lex::IntNumKeywords::Qian1] => 1000,
+        _ => unimplemented!("parsing integer"),
     }
 }
 
