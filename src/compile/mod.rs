@@ -8,7 +8,7 @@ struct Env {
     shu1zhi1_reference: Vec<String>,
 }
 
-fn compile_literal(
+fn compile_optional_literal(
     lit: Option<&parse::Data>,
     default_type: lex::Type,
     conversion_table: &HashMap<String, String>,
@@ -20,15 +20,24 @@ fn compile_literal(
             lex::Type::Yan2 => "\"\"".to_string(),
             lex::Type::Yao2 => "false".to_string(),
         },
-        Some(v) => match v.clone() {
+        Some(v) => compile_literal(v, &conversion_table),
+    }
+}
+
+fn compile_literal(
+    v: &parse::Data,
+    conversion_table: &HashMap<String, String>,
+) -> String {
+    match v.clone() {
             parse::Data::BoolValue(true) => "true".to_string(),
             parse::Data::BoolValue(false) => "false".to_string(),
             parse::Data::Identifier(ident) => to_pinyin(ident, &conversion_table),
             parse::Data::IntNum(intnum) => format!("{}.0", intnum),
             parse::Data::StringLiteral(strlit) => format!("\"{}\"", strlit), // FIXME properly escape
-        },
-    }
+        }
+    
 }
+
 
 fn compile_statement(
     env: &mut Env,
@@ -49,7 +58,7 @@ fn compile_statement(
                     "{}let _ans{} = {};\n",
                     "    ".repeat(env.indent_level),
                     env.ans_counter,
-                    compile_literal(data_arr.get(i), *type_, &conversion_table)
+                    compile_optional_literal(data_arr.get(i), *type_, &conversion_table)
                 ));
                 new_shu1zhi1.push(format!("_ans{}", env.ans_counter));
             }
@@ -70,12 +79,20 @@ fn compile_statement(
             ans.push_str(");\n");
             env.shu1zhi1_reference = vec![];
         }
+        parse::Statement::Assign { ident, data } => {
+            ans = format!(
+                "{}{} = {}; // error[E0384]: cannot assign twice to immutable variable\n",
+                "    ".repeat(env.indent_level),
+                to_pinyin(ident.clone(), &conversion_table),
+                compile_literal(data, &conversion_table)
+            )
+        }
         parse::Statement::InitDefine { type_, data, name } => {
             ans = format!(
                 "{}let {} = {};\n",
                 "    ".repeat(env.indent_level),
                 to_pinyin(name.clone(), &conversion_table),
-                compile_literal(Some(data), *type_, &conversion_table)
+                compile_optional_literal(Some(data), *type_, &conversion_table)
             );
             env.shu1zhi1_reference = vec![];
         }
@@ -138,7 +155,7 @@ fn compile_statement(
                             "{}let _ans{} = {};\n",
                             "    ".repeat(env.indent_level),
                             env.ans_counter,
-                            compile_literal(data_arr.get(i), *type_, &conversion_table)
+                            compile_optional_literal(data_arr.get(i), *type_, &conversion_table)
                         ));
                         new_shu1zhi1.push(format!("_ans{}", env.ans_counter));
                     }
@@ -147,7 +164,7 @@ fn compile_statement(
                             "{}let {} = {};\n",
                             "    ".repeat(env.indent_level),
                             to_pinyin(ident.clone(), &conversion_table),
-                            compile_literal(data_arr.get(i), *type_, &conversion_table)
+                            compile_optional_literal(data_arr.get(i), *type_, &conversion_table)
                         ));
                     }
                 }

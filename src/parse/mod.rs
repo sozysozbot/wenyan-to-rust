@@ -24,7 +24,10 @@ pub enum Statement {
     // If,
     // Return,
     // Math,
-    // Assign,
+    Assign {
+        ident: Identifier,
+        data: Data,
+    },
     // Import,
     // Object,
     // Reference,
@@ -55,7 +58,7 @@ pub struct Identifier(pub String);
 
 #[derive(Debug)]
 pub enum Error {
-    UnresolvableTokens,
+    SomethingWentWrong,
     UnexpectedEOF,
     InvalidVariableCount,
 }
@@ -129,16 +132,16 @@ fn parse_init_define_statement_after_you3(
                                     data
                                 })
                             }
-                            _ => return Err(Error::UnresolvableTokens),
+                            _ => return Err(Error::SomethingWentWrong),
                         }
                     }
-                    _ => return Err(Error::UnresolvableTokens),
+                    _ => return Err(Error::SomethingWentWrong),
                 }
             }
             _ => panic!("If this message is obtained by a wenyan program that successfully compiles in the original edition, please submit an issue."),
         }
     } else {
-        return Err(Error::UnresolvableTokens);
+        return Err(Error::SomethingWentWrong);
     }
 }
 
@@ -169,7 +172,7 @@ fn parse_statement(
                             statements: inner,
                         });
                     }
-                    _ => return Err(Error::UnresolvableTokens),
+                    _ => return Err(Error::SomethingWentWrong),
                 },
                 lex::Lex::Identifier(ident) => match iter.next().ok_or(Error::UnexpectedEOF)? {
                     lex::Lex::Bian4 => {
@@ -187,13 +190,62 @@ fn parse_statement(
                             statements: inner,
                         });
                     }
-                    _ => return Err(Error::UnresolvableTokens),
+                    _ => return Err(Error::SomethingWentWrong),
                 },
-                _ => return Err(Error::UnresolvableTokens),
+                _ => return Err(Error::SomethingWentWrong),
             }
         }
         lex::Lex::Shu1Zhi1 => return Ok(Statement::Print),
-        lex::Lex::Jin1You3 | lex::Lex::Wu2You3 => {
+        lex::Lex::Xi1Zhi1 => {
+            // '昔之' IDENTIFIER
+            // (
+            //     '之' (INT_NUM|STRING_LITERAL|IDENTIFIER)
+            // )? '者'
+            // (
+            //     (
+            //         '今'
+            //          (
+            //              (data ('之' INT_NUM)?)|'其'
+            //          ) '是矣'
+            //     ) |
+            //     '今不復存矣'
+            // ) ;
+
+            if let lex::Lex::Identifier(ident) = iter.next().ok_or(Error::UnexpectedEOF)? {
+                match iter.next().ok_or(Error::UnexpectedEOF)? {
+                    lex::Lex::Zhi1 => {
+                        unimplemented!("昔之 IDENTIFIER 之 (INT_NUM|STRING_LITERAL|IDENTIFIER)")
+                    }
+                    lex::Lex::Zhe3 => match iter.next().ok_or(Error::UnexpectedEOF)? {
+                        lex::Lex::Jin1Bu4Fu4Cun2Yi3 => unimplemented!("昔之 ... 者今不復存矣"),
+                        lex::Lex::Jin1 => match iter.peek().ok_or(Error::UnexpectedEOF)? {
+                            lex::Lex::Qi2 => unimplemented!("昔之 ... 者今其是矣"),
+                            _ => {
+                                let data = parse_data(&mut iter)?;
+
+                                match iter.next().ok_or(Error::UnexpectedEOF)? {
+                                    lex::Lex::Zhi1 => {
+                                        unimplemented!("昔之 ... 者今data之INT_NUM是矣")
+                                    }
+                                    lex::Lex::Shi4Yi3 => {
+                                        return Ok(Statement::Assign {
+                                            ident: Identifier(ident.clone()),
+                                            data,
+                                        })
+                                    }
+                                    _ => return Err(Error::SomethingWentWrong),
+                                }
+                            }
+                        },
+                        _ => return Err(Error::SomethingWentWrong),
+                    },
+                    _ => return Err(Error::SomethingWentWrong),
+                }
+            } else {
+                return Err(Error::SomethingWentWrong);
+            }
+        }
+        lex::Lex::Wu2You3 => {
             let next = iter.next().ok_or(Error::UnexpectedEOF)?;
             match next {
                 lex::Lex::IntNum(num) => {
@@ -243,7 +295,7 @@ fn parse_statement(
                                         {
                                             idents.push(Identifier(ident.clone()));
                                         } else {
-                                            return Err(Error::UnresolvableTokens);
+                                            return Err(Error::SomethingWentWrong);
                                         }
                                     } else {
                                         break;
@@ -251,7 +303,7 @@ fn parse_statement(
                                 }
 
                                 if idents.is_empty() {
-                                    return Err(Error::UnresolvableTokens); // we need at least one 曰 now that we have seen 名之
+                                    return Err(Error::SomethingWentWrong); // we need at least one 曰 now that we have seen 名之
                                 }
 
                                 return Ok(Statement::Define {
@@ -265,7 +317,7 @@ fn parse_statement(
                         _ => unimplemented!(), // 術, 物
                     }
                 }
-                _ => return Err(Error::UnresolvableTokens),
+                _ => return Err(Error::SomethingWentWrong),
             }
         }
         _ => unimplemented!(),

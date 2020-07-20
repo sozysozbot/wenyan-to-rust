@@ -6,7 +6,9 @@ pub enum Lex {
     Jin1,
     /// 今有
     Jin1You3,
-    Type(Type),
+
+    /// 今不復存矣
+    Jin1Bu4Fu4Cun2Yi3,
     /// 曰
     Yue1,
 
@@ -31,8 +33,47 @@ pub enum Lex {
     /// 名之
     Ming2Zhi1,
 
+    /// 昔之
+    Xi1Zhi1,
+
+    /// 之
+    Zhi1,
+
+    /// 之術也
+    Zhi1Shu4Ye3,
+
+    /// 之書
+    Zhi1Shu1,
+
+    /// 之義
+    Zhi1Yi4,
+
+    /// 之物也
+    Zhi1Wu4Ye3,
+
+    /// 者
+    Zhe3,
+
     /// 吾嘗觀
     Wu2Chang2Guan1,
+
+    /// 其
+    Qi2,
+
+    /// 其餘
+    Qi2Yu2,
+
+    /// 其物如是
+    Qi2Wu4Ru2Shi4,
+
+    /// 是矣
+    Shi4Yi3,
+    /// 是術曰
+    Shi4Shu4Yue1,
+    /// 是謂
+    Shi4Wei4,
+
+    Type(Type),
     StringLiteral(String),
     BoolValue(BoolValue),
     Identifier(String),
@@ -284,6 +325,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
             '遍' => Lex::Bian4,
             '陰' => Lex::BoolValue(BoolValue::Yin1),
             '陽' => Lex::BoolValue(BoolValue::Yang2),
+            '者' => Lex::Zhe3,
             '「' => lex_ident_or_str_after_seeing_quote(&mut iter)?,
             '吾' => match iter.next().ok_or(Error::UnexpectedEOFAfter('吾'))? {
                 '有' => Lex::Wu2You3,
@@ -291,6 +333,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
                 a => return Err(Error::UnexpectedCharAfter('吾', a)),
             },
             '為' => two_char_keyword(&mut iter, '為', '是', Lex::Wei2Shi4)?,
+            '昔' => two_char_keyword(&mut iter, '昔', '之', Lex::Xi1Zhi1)?,
             '云' => two_char_keyword(&mut iter, '云', '云', Lex::Yun2Yun2)?,
             '恆' => match iter.next().ok_or(Error::UnexpectedEOFAfter('恆'))? {
                 '為' => two_char_keyword(&mut iter, '為', '是', Lex::Heng2Wei2Shi4)?,
@@ -298,6 +341,28 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
             },
             '書' => two_char_keyword(&mut iter, '書', '之', Lex::Shu1Zhi1)?,
             '名' => two_char_keyword(&mut iter, '名', '之', Lex::Ming2Zhi1)?,
+            '之' => {
+                let peek = iter.peek();
+                match peek {
+                    Some('書') => {
+                        iter.next();
+                        Lex::Zhi1Shu1
+                    }
+                    Some('義') => {
+                        iter.next();
+                        Lex::Zhi1Yi4
+                    }
+                    Some('術') => {
+                        iter.next();
+                        two_char_keyword(&mut iter, '術', '也', Lex::Zhi1Shu4Ye3)?
+                    }
+                    Some('物') => {
+                        iter.next();
+                        two_char_keyword(&mut iter, '物', '也', Lex::Zhi1Wu4Ye3)?
+                    }
+                    _ => Lex::Zhi1,
+                }
+            }
             '今' => {
                 let peek = iter.peek();
                 match peek {
@@ -305,9 +370,45 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
                         iter.next();
                         Lex::Jin1You3
                     }
+                    Some('不') => {
+                        iter.next();
+                        match iter.next().ok_or(Error::UnexpectedEOFAfter('不'))? {
+                            '復' => match iter.next().ok_or(Error::UnexpectedEOFAfter('復'))? {
+                                '存' => {
+                                    two_char_keyword(&mut iter, '存', '矣', Lex::Jin1Bu4Fu4Cun2Yi3)?
+                                }
+                                a => return Err(Error::UnexpectedCharAfter('復', a)),
+                            },
+                            a => return Err(Error::UnexpectedCharAfter('不', a)),
+                        }
+                    }
+
                     _ => Lex::Jin1,
                 }
             }
+            '其' => {
+                let peek = iter.peek();
+                match peek {
+                    Some('餘') => {
+                        iter.next();
+                        Lex::Qi2Yu2
+                    }
+                    Some('物') => {
+                        iter.next();
+                        match iter.next().ok_or(Error::UnexpectedEOFAfter('物'))? {
+                            '如' => two_char_keyword(&mut iter, '如', '是', Lex::Qi2Wu4Ru2Shi4)?,
+                            a => return Err(Error::UnexpectedCharAfter('物', a)),
+                        }
+                    }
+                    _ => Lex::Qi2,
+                }
+            }
+            '是' => match iter.next().ok_or(Error::UnexpectedEOFAfter('是'))? {
+                '矣' => Lex::Shi4Yi3,
+                '謂' => Lex::Shi4Wei4,
+                '術' => two_char_keyword(&mut iter, '術', '曰', Lex::Shi4Shu4Yue1)?,
+                a => return Err(Error::UnexpectedCharAfter('是', a)),
+            },
             '零' | '一' | '二' | '三' | '四' | '五' | '六' | '七' | '八' | '九' | '十' | '百'
             | '千' | '萬' | '億' | '兆' | '京' | '垓' | '秭' | '穣' | '溝' | '澗' | '正' | '載'
             | '極' => (lex_int_num(c, &mut iter)?),
