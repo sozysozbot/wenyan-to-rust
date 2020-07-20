@@ -166,9 +166,7 @@ impl FloatNumKeywords {
 }
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
-pub enum IntNumKeywords {
-    /// 零
-    Ling2,
+pub enum IntDigit {
     /// 一
     Yi1,
     /// 二
@@ -187,6 +185,25 @@ pub enum IntNumKeywords {
     Ba1,
     /// 九
     Jiu3,
+}
+impl IntDigit {
+    pub fn to_num(self) -> i64 {
+        match self {
+            IntDigit::Yi1 => 1,
+            IntDigit::Er4 => 2,
+            IntDigit::San1 => 3,
+            IntDigit::Si4 => 4,
+            IntDigit::Wu3 => 5,
+            IntDigit::Liu4 => 6,
+            IntDigit::Qi1 => 7,
+            IntDigit::Ba1 => 8,
+            IntDigit::Jiu3 => 9,
+        }
+    }
+}
+
+#[derive(Eq, PartialEq, Debug, Clone, Copy)]
+pub enum IntMult {
     /// 十
     Shi2,
     /// 百
@@ -219,34 +236,43 @@ pub enum IntNumKeywords {
     Ji2,
 }
 
+#[derive(Eq, PartialEq, Debug, Clone, Copy)]
+pub enum IntNumKeywords {
+    /// 零
+    Ling2,
+
+    IntDigit(IntDigit),
+    IntMult(IntMult),
+}
+
 impl IntNumKeywords {
     fn from_char(c: char) -> Option<IntNumKeywords> {
         match c {
             '零' => Some(IntNumKeywords::Ling2),
-            '一' => Some(IntNumKeywords::Yi1),
-            '二' => Some(IntNumKeywords::Er4),
-            '三' => Some(IntNumKeywords::San1),
-            '四' => Some(IntNumKeywords::Si4),
-            '五' => Some(IntNumKeywords::Wu3),
-            '六' => Some(IntNumKeywords::Liu4),
-            '七' => Some(IntNumKeywords::Qi1),
-            '八' => Some(IntNumKeywords::Ba1),
-            '九' => Some(IntNumKeywords::Jiu3),
-            '十' => Some(IntNumKeywords::Shi2),
-            '百' => Some(IntNumKeywords::Bai3),
-            '千' => Some(IntNumKeywords::Qian1),
-            '萬' => Some(IntNumKeywords::Wan4),
-            '億' => Some(IntNumKeywords::Yi4),
-            '兆' => Some(IntNumKeywords::Zhao4),
-            '京' => Some(IntNumKeywords::Jing1),
-            '垓' => Some(IntNumKeywords::Gai1),
-            '秭' => Some(IntNumKeywords::Zi3),
-            '穣' => Some(IntNumKeywords::Rang2),
-            '溝' => Some(IntNumKeywords::Gou1),
-            '澗' => Some(IntNumKeywords::Jian4),
-            '正' => Some(IntNumKeywords::Zheng4),
-            '載' => Some(IntNumKeywords::Zai4),
-            '極' => Some(IntNumKeywords::Ji2),
+            '一' => Some(IntNumKeywords::IntDigit(IntDigit::Yi1)),
+            '二' => Some(IntNumKeywords::IntDigit(IntDigit::Er4)),
+            '三' => Some(IntNumKeywords::IntDigit(IntDigit::San1)),
+            '四' => Some(IntNumKeywords::IntDigit(IntDigit::Si4)),
+            '五' => Some(IntNumKeywords::IntDigit(IntDigit::Wu3)),
+            '六' => Some(IntNumKeywords::IntDigit(IntDigit::Liu4)),
+            '七' => Some(IntNumKeywords::IntDigit(IntDigit::Qi1)),
+            '八' => Some(IntNumKeywords::IntDigit(IntDigit::Ba1)),
+            '九' => Some(IntNumKeywords::IntDigit(IntDigit::Jiu3)),
+            '十' => Some(IntNumKeywords::IntMult(IntMult::Shi2)),
+            '百' => Some(IntNumKeywords::IntMult(IntMult::Bai3)),
+            '千' => Some(IntNumKeywords::IntMult(IntMult::Qian1)),
+            '萬' => Some(IntNumKeywords::IntMult(IntMult::Wan4)),
+            '億' => Some(IntNumKeywords::IntMult(IntMult::Yi4)),
+            '兆' => Some(IntNumKeywords::IntMult(IntMult::Zhao4)),
+            '京' => Some(IntNumKeywords::IntMult(IntMult::Jing1)),
+            '垓' => Some(IntNumKeywords::IntMult(IntMult::Gai1)),
+            '秭' => Some(IntNumKeywords::IntMult(IntMult::Zi3)),
+            '穣' => Some(IntNumKeywords::IntMult(IntMult::Rang2)),
+            '溝' => Some(IntNumKeywords::IntMult(IntMult::Gou1)),
+            '澗' => Some(IntNumKeywords::IntMult(IntMult::Jian4)),
+            '正' => Some(IntNumKeywords::IntMult(IntMult::Zheng4)),
+            '載' => Some(IntNumKeywords::IntMult(IntMult::Zai4)),
+            '極' => Some(IntNumKeywords::IntMult(IntMult::Ji2)),
             _ => None,
         }
     }

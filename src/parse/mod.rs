@@ -78,21 +78,19 @@ pub enum Error {
     InvalidVariableCount,
 }
 
+#[allow(clippy::enum_glob_use)]
 fn interpret_intnum(num: &lex::IntNum) -> i64 {
+    use lex::IntMult::*;
+    use lex::IntNumKeywords::*;
     let lex::IntNum(v) = num;
     match v.as_slice() {
-        &[lex::IntNumKeywords::Ling2] => 0,
-        &[lex::IntNumKeywords::Yi1] => 1,
-        &[lex::IntNumKeywords::Er4] => 2,
-        &[lex::IntNumKeywords::San1] => 3,
-        &[lex::IntNumKeywords::Si4] => 4,
-        &[lex::IntNumKeywords::Wu3] => 5,
-        &[lex::IntNumKeywords::Liu4] => 6,
-        &[lex::IntNumKeywords::Qi1] => 7,
-        &[lex::IntNumKeywords::Ba1] => 8,
-        &[lex::IntNumKeywords::Jiu3] => 9,
-        &[lex::IntNumKeywords::Shi2] => 10,
-        &[lex::IntNumKeywords::Qian1] => 1000,
+        &[Ling2] => 0,
+        &[IntDigit(d)] => d.to_num(),
+        &[IntMult(Shi2)] => 10,
+        &[IntMult(Shi2), IntDigit(d)] => 10 + d.to_num(),
+        &[IntDigit(d), IntMult(Shi2)] => 10 * d.to_num(),
+        &[IntDigit(d), IntMult(Shi2), IntDigit(e)] => 10 * d.to_num() + e.to_num(),
+        &[IntMult(Qian1)] => 1000,
         _ => unimplemented!("parsing integer"),
     }
 }

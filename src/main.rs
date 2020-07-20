@@ -136,6 +136,22 @@ mod tests {
     fn test022() {
         test("test022")
     }
+    #[test]
+    fn test023() {
+        test("test023")
+    }
+    #[test]
+    fn test024() {
+        test("test024")
+    }
+    #[test]
+    fn test025() {
+        test("test025")
+    }
+    #[test]
+    fn test026() {
+        test("test026")
+    }
 }
 
 use std::collections::HashMap;
