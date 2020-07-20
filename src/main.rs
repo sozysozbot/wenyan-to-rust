@@ -5,6 +5,7 @@ use std::io::prelude::*;
 extern crate clap;
 use clap::{App, Arg};
 mod compile;
+mod identbimap;
 mod lex;
 mod parse;
 

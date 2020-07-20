@@ -1,3 +1,4 @@
+use crate::identbimap;
 use crate::lex;
 use crate::parse;
 #[derive(Clone)]
@@ -6,7 +7,7 @@ struct Env {
     rand_counter: usize,
     indent_level: usize,
     shu1zhi1_reference: Vec<String>,
-    ident_map: IdentBiMap,
+    ident_map: identbimap::IdentBiMap,
 }
 
 fn compile_optional_literal(
@@ -260,7 +261,7 @@ pub fn compile(
         rand_counter: 0,
         indent_level: 1,
         shu1zhi1_reference: vec![],
-        ident_map: IdentBiMap::new(&parsed, &conversion_table),
+        ident_map: identbimap::IdentBiMap::new(&parsed, &conversion_table),
     };
 
     for st in parsed {
@@ -271,127 +272,4 @@ pub fn compile(
     ans.push_str("\n");
 
     ans
-}
-
-fn to_pinyin(ident: parse::Identifier, conversion_table: &HashMap<String, String>) -> String {
-    let parse::Identifier(i) = ident;
-    let vec = i
-        .chars()
-        .map(|c| {
-            conversion_table
-                .get(&format!("{:X}", c as u32).to_string())
-                .unwrap_or(&"_".to_string())
-                .to_string()
-        })
-        .collect::<Vec<_>>();
-    vec.join("")
-}
-
-use bimap::BiMap;
-
-type Hanzi = parse::Identifier;
-type Ascii = String;
-
-#[derive(Clone)]
-struct IdentBiMap(BiMap<Hanzi, Ascii>);
-
-impl IdentBiMap {
-    pub fn translate_from_hanzi(&self, id: &parse::Identifier) -> Ascii {
-        self.0.get_by_left(id).unwrap().to_string()
-    }
-
-    pub fn new(parsed: &Vec<parse::Statement>, conversion_table: &HashMap<String, String>) -> Self {
-        let mut ans = IdentBiMap(BiMap::new());
-        for st in parsed {
-            ans.insert_stmt(&st, &conversion_table);
-        }
-        ans
-    }
-
-    fn insert_ident(
-        &mut self,
-        ident: parse::Identifier,
-        conversion_table: &HashMap<String, String>,
-    ) {
-        // if already known, no need to do anything
-        if self.0.get_by_left(&ident).is_some() {
-            return;
-        }
-
-        // otherwise, ident is unknown, and hence must be added.
-
-        let mut candidate: Ascii = to_pinyin(ident.clone(), &conversion_table);
-
-        loop {
-            if self.0.get_by_right(&candidate).is_some() {
-                candidate.push('_');
-            } else {
-                self.0.insert(ident, candidate);
-                break;
-            }
-        }
-    }
-
-    fn insert_dat(&mut self, dat: &parse::Data, conversion_table: &HashMap<String, String>) {
-        if let parse::Data::Identifier(id) = dat {
-            self.insert_ident(id.clone(), &conversion_table)
-        }
-    }
-
-    fn insert_stmt(&mut self, st: &parse::Statement, conversion_table: &HashMap<String, String>) {
-        match st {
-            parse::Statement::Assign { ident, data } => {
-                self.insert_ident(ident.clone(), &conversion_table);
-                self.insert_dat(data, &conversion_table);
-            }
-            parse::Statement::Print => {}
-            parse::Statement::ForEnum { statements, num: _ } => {
-                for s in statements {
-                    self.insert_stmt(&s, &conversion_table)
-                }
-            }
-            parse::Statement::Declare {
-                0:
-                    parse::DeclareStatement {
-                        how_many_variables: _,
-                        type_: _,
-                        data_arr,
-                    },
-            } => {
-                for dat in data_arr {
-                    self.insert_dat(dat, &conversion_table);
-                }
-            }
-            parse::Statement::InitDefine {
-                name,
-                type_: _,
-                data: dat,
-            } => {
-                self.insert_dat(dat, &conversion_table);
-                self.insert_ident(name.clone(), &conversion_table)
-            }
-            parse::Statement::ForEnumIdent { ident, statements } => {
-                self.insert_ident(ident.clone(), &conversion_table);
-                for s in statements {
-                    self.insert_stmt(&s, &conversion_table)
-                }
-            }
-            parse::Statement::Define {
-                idents,
-                decl:
-                    parse::DeclareStatement {
-                        how_many_variables: _,
-                        type_: _,
-                        data_arr,
-                    },
-            } => {
-                for dat in data_arr {
-                    self.insert_dat(dat, &conversion_table);
-                }
-                for ident in idents {
-                    self.insert_ident(ident.clone(), &conversion_table)
-                }
-            }
-        }
-    }
 }
