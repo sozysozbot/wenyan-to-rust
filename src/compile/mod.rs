@@ -175,56 +175,60 @@ fn compile_forenum(env: &Env, num: i64, statements: &[parse::Statement]) -> Stri
     );
 }
 
+fn compile_math(env: &mut Env, math: &parse::MathKind) -> String {
+    let parse::MathKind::ArithBinaryMath(op, data1, prep, data2) = math;
+    // 吾有三數。曰三曰五曰二名之曰「甲」。加其以五。
+    // is to be translated as
+    // ```
+    // var 甲 = 3;
+    // var _ans1 = 5;
+    // var _ans2 = 2;
+    // const _ans3 = _ans2 + 5;
+    // ```
+
+    // 加其以五。書之。
+    // is to be translated as
+    // ```
+    // const _ans1 = undefined + 5;
+    // console.log(_ans1);
+    // ```
+
+    let left = match prep {
+        lex::Preposition::Yi3 => data1,
+        lex::Preposition::Yu2 => data2,
+    };
+    let right = match prep {
+        lex::Preposition::Yi3 => data2,
+        lex::Preposition::Yu2 => data1,
+    };
+    env.ans_counter += 1;
+    let r = format!(
+        "{}let _ans{} = {} {} {};\n",
+        "    ".repeat(env.indent_level),
+        env.ans_counter,
+        compile_dataorqi2(&env, &left),
+        op.to_str(),
+        compile_dataorqi2(&env, &right),
+    );
+    env.shu1zhi1_reference = vec![format!("_ans{}", env.ans_counter)];
+    return r;
+}
+
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
-    let mut ans = String::new();
     match st {
-        parse::Statement::Math {
-            math: parse::MathKind::ArithBinaryMath(op, data1, prep, data2),
-        } => {
-            // 吾有三數。曰三曰五曰二名之曰「甲」。加其以五。
-            // is to be translated as
-            // ```
-            // var 甲 = 3;
-            // var _ans1 = 5;
-            // var _ans2 = 2;
-            // const _ans3 = _ans2 + 5;
-            // ```
-
-            // 加其以五。書之。
-            // is to be translated as
-            // ```
-            // const _ans1 = undefined + 5;
-            // console.log(_ans1);
-            // ```
-
-            let left = match prep {
-                &lex::Preposition::Yi3 => data1,
-                &lex::Preposition::Yu2 => data2,
-            };
-            let right = match prep {
-                &lex::Preposition::Yi3 => data2,
-                &lex::Preposition::Yu2 => data1,
-            };
-            env.ans_counter += 1;
-            ans.push_str(&format!(
-                "{}let _ans{} = {} {} {};\n",
-                "    ".repeat(env.indent_level),
-                env.ans_counter,
-                compile_dataorqi2(&env, left),
-                op.to_str(),
-                compile_dataorqi2(&env, right),
-            ));
-            env.shu1zhi1_reference = vec![format!("_ans{}", env.ans_counter)];
+        parse::Statement::Math { math } => {
+            return compile_math(&mut env, math);
         }
         parse::Statement::Declare(parse::DeclareStatement {
             how_many_variables,
             type_,
             data_arr,
         }) => {
+            let mut r = String::new();
             let mut new_shu1zhi1 = vec![];
             for i in 0..*how_many_variables {
                 env.ans_counter += 1;
-                ans.push_str(&format!(
+                r.push_str(&format!(
                     "{}let _ans{} = {};\n",
                     "    ".repeat(env.indent_level),
                     env.ans_counter,
@@ -232,25 +236,27 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
                 ));
                 new_shu1zhi1.push(format!("_ans{}", env.ans_counter));
             }
-            env.shu1zhi1_reference = new_shu1zhi1
+            env.shu1zhi1_reference = new_shu1zhi1;
+            return r;
         }
         parse::Statement::Print => {
-            ans = format!(
+            let mut r = format!(
                 "{}println!(\"{}\"",
                 "    ".repeat(env.indent_level),
                 "{} ".repeat(env.shu1zhi1_reference.len()).trim_end(),
             );
 
             for varname in &env.shu1zhi1_reference {
-                ans.push_str(", ");
-                ans.push_str(varname);
+                r.push_str(", ");
+                r.push_str(varname);
             }
 
-            ans.push_str(");\n");
+            r.push_str(");\n");
             env.shu1zhi1_reference = vec![];
+            return r;
         }
         parse::Statement::Assign { ident, data } => {
-            ans = format!(
+            return format!(
                 "{}{} = {};\n",
                 "    ".repeat(env.indent_level),
                 env.ident_map.translate_from_hanzi(&ident),
@@ -258,7 +264,7 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
             )
         }
         parse::Statement::InitDefine { type_, data, name } => {
-            ans = format!(
+            let r = format!(
                 "{}let {}{} = {};\n",
                 "    ".repeat(env.indent_level),
                 if env.ident_map.is_mutable(&name) {
@@ -270,20 +276,18 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
                 compile_optional_literal(&env, Some(data), *type_)
             );
             env.shu1zhi1_reference = vec![];
+            return r;
         }
         parse::Statement::Define { decl, idents } => {
-            ans = compile_define(&mut env, decl, &idents);
+            return compile_define(&mut env, decl, &idents);
         }
         parse::Statement::ForEnum { num, statements } => {
-            ans = compile_forenum(&env, *num, &statements);
+            return compile_forenum(&env, *num, &statements);
         }
-
         parse::Statement::ForEnumIdent { ident, statements } => {
-            ans = compile_forenum_ident(&mut env, ident, statements);
+            return compile_forenum_ident(&mut env, ident, statements);
         }
     }
-
-    ans
 }
 
 fn compile_forenum_ident(
