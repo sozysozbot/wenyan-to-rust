@@ -6,7 +6,7 @@ struct Env {
     rand_counter: usize,
     indent_level: usize,
     shu1zhi1_reference: Vec<String>,
-    ident_map: BiMap<Hanzi, Ascii>
+    ident_map: IdentBiMap,
 }
 
 fn compile_optional_literal(
@@ -29,7 +29,7 @@ fn compile_literal(env: &Env, v: &parse::Data) -> String {
     match v.clone() {
         parse::Data::BoolValue(true) => "true".to_string(),
         parse::Data::BoolValue(false) => "false".to_string(),
-        parse::Data::Identifier(ident) => env.ident_map.get_by_left(&ident).unwrap().to_string(),
+        parse::Data::Identifier(ident) => env.ident_map.translate_from_hanzi(&ident),
         parse::Data::IntNum(intnum) => format!("{}.0", intnum),
         parse::Data::StringLiteral(strlit) => format!("\"{}\"", strlit), // FIXME properly escape
     }
@@ -78,7 +78,6 @@ fn compile_define(
     env: &mut Env,
     decl: &parse::DeclareStatement,
     idents: &Vec<parse::Identifier>,
-    conversion_table: &HashMap<String, String>,
 ) -> String {
     let parse::DeclareStatement {
         how_many_variables,
@@ -105,7 +104,7 @@ fn compile_define(
                 ans.push_str(&format!(
                     "{}let {} = {};\n",
                     "    ".repeat(env.indent_level),
-                    env.ident_map.get_by_left(&ident).unwrap(),
+                    env.ident_map.translate_from_hanzi(&ident),
                     compile_optional_literal(&env, data_arr.get(i), *type_)
                 ));
             }
@@ -116,11 +115,7 @@ fn compile_define(
     ans
 }
 
-fn compile_statement(
-    mut env: &mut Env,
-    st: &parse::Statement,
-    conversion_table: &HashMap<String, String>,
-) -> String {
+fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
     let mut ans = String::new();
     match st {
         parse::Statement::Declare(parse::DeclareStatement {
@@ -160,7 +155,7 @@ fn compile_statement(
             ans = format!(
                 "{}{} = {}; // error[E0384]: cannot assign twice to immutable variable\n",
                 "    ".repeat(env.indent_level),
-                env.ident_map.get_by_left(&ident).unwrap(),
+                env.ident_map.translate_from_hanzi(&ident),
                 compile_literal(&env, data)
             )
         }
@@ -168,13 +163,13 @@ fn compile_statement(
             ans = format!(
                 "{}let {} = {};\n",
                 "    ".repeat(env.indent_level),
-                env.ident_map.get_by_left(&name).unwrap(),
+                env.ident_map.translate_from_hanzi(&name),
                 compile_optional_literal(&env, Some(data), *type_)
             );
             env.shu1zhi1_reference = vec![];
         }
         parse::Statement::Define { decl, idents } => {
-            ans = compile_define(&mut env, decl, &idents, &conversion_table);
+            ans = compile_define(&mut env, decl, &idents);
         }
         parse::Statement::ForEnum { num, statements } => {
             let mut inner = String::new();
@@ -208,7 +203,7 @@ fn compile_statement(
                 shu1zhi1_reference: env.shu1zhi1_reference.clone(),
             };
             for st in statements {
-                inner.push_str(&compile_statement(&mut new_env, &st, &conversion_table));
+                inner.push_str(&compile_statement(&mut new_env, &st));
             }
             ans = format!(
                 "{}for _ in 0..{} {{\n{}{}}}\n",
@@ -233,7 +228,7 @@ fn compile_statement(
                 shu1zhi1_reference: env.shu1zhi1_reference.clone(),
             };
             for st in statements {
-                inner.push_str(&compile_statement(&mut new_env, &st, &conversion_table));
+                inner.push_str(&compile_statement(&mut new_env, &st));
             }
 
             ans = format!(
@@ -242,7 +237,7 @@ fn compile_statement(
                 rand_n,
                 "    ".repeat(env.indent_level),
                 rand_n,
-                env.ident_map.get_by_left(&ident).unwrap(),
+                env.ident_map.translate_from_hanzi(&ident),
                 inner,
                 "    ".repeat(env.indent_level + 1),
                 rand_n,
@@ -265,11 +260,11 @@ pub fn compile(
         rand_counter: 0,
         indent_level: 1,
         shu1zhi1_reference: vec![],
-        ident_map: create_ident_map(&parsed, &conversion_table)
+        ident_map: IdentBiMap::new(&parsed, &conversion_table),
     };
 
     for st in parsed {
-        ans.push_str(&compile_statement(&mut env, &st, &conversion_table));
+        ans.push_str(&compile_statement(&mut env, &st));
     }
 
     ans.push_str(r#"}"#);
@@ -332,7 +327,7 @@ fn insert_stmt_to_ident_map(
     conversion_table: &HashMap<String, String>,
 ) {
     match st {
-        parse::Statement::Assign{ ident, data} => {
+        parse::Statement::Assign { ident, data } => {
             insert_to_ident_map(ident.clone(), &mut ans, &conversion_table);
             insert_dat_to_ident_map(data, &mut ans, &conversion_table);
         }
@@ -342,32 +337,43 @@ fn insert_stmt_to_ident_map(
                 insert_stmt_to_ident_map(&s, &mut ans, &conversion_table)
             }
         }
-        parse::Statement::Declare { 0: parse::DeclareStatement {
-            how_many_variables: _,
-            type_: _,
-            data_arr
-        } } => {
+        parse::Statement::Declare {
+            0:
+                parse::DeclareStatement {
+                    how_many_variables: _,
+                    type_: _,
+                    data_arr,
+                },
+        } => {
             for dat in data_arr {
-                insert_dat_to_ident_map(dat, &mut ans, &conversion_table);   
+                insert_dat_to_ident_map(dat, &mut ans, &conversion_table);
             }
         }
-        parse::Statement::InitDefine { name, type_: _, data: dat } => {
+        parse::Statement::InitDefine {
+            name,
+            type_: _,
+            data: dat,
+        } => {
             insert_dat_to_ident_map(dat, &mut ans, &conversion_table);
             insert_to_ident_map(name.clone(), &mut ans, &conversion_table)
         }
-        parse::Statement::ForEnumIdent { ident, statements} => {
+        parse::Statement::ForEnumIdent { ident, statements } => {
             insert_to_ident_map(ident.clone(), &mut ans, &conversion_table);
             for s in statements {
                 insert_stmt_to_ident_map(&s, &mut ans, &conversion_table)
             }
         }
-        parse::Statement::Define { idents, decl: parse::DeclareStatement {
-            how_many_variables: _,
-            type_: _,
-            data_arr
-        } } => {
+        parse::Statement::Define {
+            idents,
+            decl:
+                parse::DeclareStatement {
+                    how_many_variables: _,
+                    type_: _,
+                    data_arr,
+                },
+        } => {
             for dat in data_arr {
-                insert_dat_to_ident_map(dat, &mut ans, &conversion_table);   
+                insert_dat_to_ident_map(dat, &mut ans, &conversion_table);
             }
             for ident in idents {
                 insert_to_ident_map(ident.clone(), &mut ans, &conversion_table)
@@ -381,15 +387,21 @@ use bimap::BiMap;
 type Hanzi = parse::Identifier;
 type Ascii = String;
 
-fn create_ident_map(
-    parsed: &Vec<parse::Statement>,
-    conversion_table: &HashMap<String, String>,
-) -> BiMap<Hanzi, Ascii> {
-    let mut ans = BiMap::new();
+#[derive(Clone)]
+struct IdentBiMap(BiMap<Hanzi, Ascii>);
 
-    for st in parsed {
-        insert_stmt_to_ident_map(&st, &mut ans, &conversion_table);
+impl IdentBiMap {
+    pub fn translate_from_hanzi(&self, id: &parse::Identifier) -> Ascii {
+        self.0.get_by_left(id).unwrap().to_string()
     }
 
-    ans
+    pub fn new(parsed: &Vec<parse::Statement>, conversion_table: &HashMap<String, String>) -> Self {
+        let mut ans = BiMap::new();
+
+        for st in parsed {
+            insert_stmt_to_ident_map(&st, &mut ans, &conversion_table);
+        }
+
+        IdentBiMap(ans)
+    }
 }
