@@ -288,62 +288,44 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
                 ans.push(lex_ident_or_str_after_seeing_quote(&mut iter)?);
             }
             '吾' => {
-                let next = iter.next();
-                match next {
-                    None => return Err(Error::UnexpectedEOFAfter('吾')),
-                    Some('有') => ans.push(Lex::Wu2You3),
-                    Some('嘗') => match iter.next() {
-                        Some('觀') => ans.push(Lex::Wu2Chang2Guan1),
-                        None => return Err(Error::UnexpectedEOFAfter('嘗')),
-                        Some(a) => return Err(Error::UnexpectedCharAfter('嘗', a)),
+                match iter.next().ok_or(Error::UnexpectedEOFAfter('吾'))? {
+                    '有' => ans.push(Lex::Wu2You3),
+                    '嘗' => match iter.next().ok_or(Error::UnexpectedEOFAfter('嘗'))? {
+                        '觀' => ans.push(Lex::Wu2Chang2Guan1),
+                        a => return Err(Error::UnexpectedCharAfter('嘗', a)),
                     },
-                    Some(a) => return Err(Error::UnexpectedCharAfter('吾', a)),
+                    a => return Err(Error::UnexpectedCharAfter('吾', a)),
                 }
             }
             '為' => {
-                let next = iter.next();
-                match next {
-                    None => return Err(Error::UnexpectedEOFAfter('為')),
-                    Some('是') => ans.push(Lex::Wei2Shi4),
-                    Some(a) => return Err(Error::UnexpectedCharAfter('為', a)),
+                match iter.next().ok_or(Error::UnexpectedEOFAfter('為'))? {
+                    '是' => ans.push(Lex::Wei2Shi4),
+                    a => return Err(Error::UnexpectedCharAfter('為', a)),
                 }
             }
             '云' => {
-                let next = iter.next();
-                match next {
-                    None => return Err(Error::UnexpectedEOFAfter('云')),
-                    Some('云') => ans.push(Lex::Yun2Yun2),
-                    Some(a) => return Err(Error::UnexpectedCharAfter('云', a)),
+                match iter.next().ok_or(Error::UnexpectedEOFAfter('云'))? {
+                    '云' => ans.push(Lex::Yun2Yun2),
+                    a => return Err(Error::UnexpectedCharAfter('云', a)),
                 }
             }
             '恆' => {
-                let next = iter.next();
-                match next {
-                    None => return Err(Error::UnexpectedEOFAfter('恆')),
-                    Some('為') => match iter.next() {
-                        Some('是') => ans.push(Lex::Heng2Wei2Shi4),
-                        None => return Err(Error::UnexpectedEOFAfter('為')),
-                        Some(a) => return Err(Error::UnexpectedCharAfter('為', a)),
+                match iter.next().ok_or(Error::UnexpectedEOFAfter('恆'))? {
+                    '為' => match iter.next().ok_or(Error::UnexpectedEOFAfter('為'))? {
+                        '是' => ans.push(Lex::Heng2Wei2Shi4),
+                        a => return Err(Error::UnexpectedCharAfter('為', a)),
                     },
-                    Some(a) => return Err(Error::UnexpectedCharAfter('恆', a)),
+                    a => return Err(Error::UnexpectedCharAfter('恆', a)),
                 }
             }
-            '書' => {
-                let next = iter.next();
-                match next {
-                    None => return Err(Error::UnexpectedEOFAfter('書')),
-                    Some('之') => ans.push(Lex::Shu1Zhi1),
-                    Some(a) => return Err(Error::UnexpectedCharAfter('書', a)),
-                }
-            }
-            '名' => {
-                let next = iter.next();
-                match next {
-                    None => return Err(Error::UnexpectedEOFAfter('名')),
-                    Some('之') => ans.push(Lex::Ming2Zhi1),
-                    Some(a) => return Err(Error::UnexpectedCharAfter('名', a)),
-                }
-            }
+            '書' => match iter.next().ok_or(Error::UnexpectedEOFAfter('書'))? {
+                '之' => ans.push(Lex::Shu1Zhi1),
+                a => return Err(Error::UnexpectedCharAfter('書', a)),
+            },
+            '名' => match iter.next().ok_or(Error::UnexpectedEOFAfter('名'))? {
+                '之' => ans.push(Lex::Ming2Zhi1),
+                a => return Err(Error::UnexpectedCharAfter('名', a)),
+            },
             '今' => {
                 let peek = iter.peek();
                 match peek {

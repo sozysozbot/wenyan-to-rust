@@ -88,7 +88,7 @@ fn main() -> std::io::Result<()> {
         )
         .get_matches();
 
-    let config = matches.value_of("config").unwrap_or("default.conf");
+    // let config = matches.value_of("config").unwrap_or("default.conf");
 
     let pinyin_json = include_str!("hanzi2roman-map-pinyin.json");
     let conversion_table: HashMap<String, String> = serde_json::from_str(pinyin_json)?;

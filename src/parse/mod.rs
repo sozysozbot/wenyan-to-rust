@@ -90,17 +90,12 @@ fn parse_data(
 fn parse_statement(
     mut iter: &mut peek_nth::PeekableNth<std::slice::Iter<'_, lex::Lex>>,
 ) -> Result<Statement, Error> {
-    let token = match iter.next() {
-        None => return Err(Error::UnexpectedEOF),
-        Some(a) => a,
-    };
-
+    let token = iter.next().ok_or(Error::UnexpectedEOF)?;
     match token {
         lex::Lex::You3 => {
             let next = iter.next();
-            match next {
-                None => return Err(Error::UnexpectedEOF),
-                Some(lex::Lex::Type(t)) => {
+            match next.ok_or(Error::UnexpectedEOF)? {
+                lex::Lex::Type(t) => {
                     let data = parse_data(&mut iter)?;
                     // According to https://wy-lang.org/spec.html#init_define_statement
                     //  '有' TYPE data (name_single_statement)?
@@ -119,13 +114,11 @@ fn parse_statement(
                         None => panic!("If this message is obtained by a wenyan program that successfully compiles in the original edition, please submit an issue."),
                         Some(lex::Lex::Ming2Zhi1) => {
                             let next = iter.next();
-                            match next {
-                                None => return Err(Error::UnexpectedEOF),
-                                Some(lex::Lex::Yue1) => {
+                            match next.ok_or(Error::UnexpectedEOF)? {
+                                lex::Lex::Yue1 => {
                                     let next = iter.next();
-                                    match next {
-                                        None => return Err(Error::UnexpectedEOF),
-                                        Some(lex::Lex::Identifier(ident)) => {
+                                    match next.ok_or(Error::UnexpectedEOF)? {
+                                        lex::Lex::Identifier(ident) => {
                                             return Ok(Statement::InitDefine {
                                                 type_: *t,
                                                 name: Identifier(ident.to_string()),
@@ -145,12 +138,10 @@ fn parse_statement(
             }
         }
         lex::Lex::Wei2Shi4 => {
-            let next = iter.next();
+            let next = iter.next().ok_or(Error::UnexpectedEOF)?;
             match next {
-                None => return Err(Error::UnexpectedEOF),
-                Some(lex::Lex::IntNum(num)) => match iter.next() {
-                    None => return Err(Error::UnexpectedEOF),
-                    Some(lex::Lex::Bian4) => {
+                lex::Lex::IntNum(num) => match iter.next().ok_or(Error::UnexpectedEOF)? {
+                    lex::Lex::Bian4 => {
                         let mut inner = vec![];
                         loop {
                             if iter.peek() == Some(&&lex::Lex::Yun2Yun2) {
@@ -167,19 +158,17 @@ fn parse_statement(
                     }
                     _ => return Err(Error::UnresolvableTokens),
                 },
-                Some(lex::Lex::Identifier(_)) => unimplemented!("looping with an identifier"),
+                lex::Lex::Identifier(_) => unimplemented!("looping with an identifier"),
                 _ => return Err(Error::UnresolvableTokens),
             }
         }
         lex::Lex::Shu1Zhi1 => return Ok(Statement::Print),
         lex::Lex::Jin1You3 | lex::Lex::Wu2You3 => {
-            let next = iter.next();
+            let next = iter.next().ok_or(Error::UnexpectedEOF)?;
             match next {
-                None => return Err(Error::UnexpectedEOF),
-                Some(lex::Lex::IntNum(num)) => {
-                    match iter.next() {
-                        None => return Err(Error::UnexpectedEOF),
-                        Some(lex::Lex::Type(t)) => {
+                lex::Lex::IntNum(num) => {
+                    match iter.next().ok_or(Error::UnexpectedEOF)? {
+                        lex::Lex::Type(t) => {
                             use std::convert::TryFrom;
 
                             let mut ans = vec![];
