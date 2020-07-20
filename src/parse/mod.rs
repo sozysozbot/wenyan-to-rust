@@ -128,10 +128,9 @@ fn parse_data_or_qi2(
 fn parse_preposition(
     iter: &mut peek_nth::PeekableNth<std::slice::Iter<'_, lex::Lex>>,
 ) -> Result<lex::Preposition, Error> {
-    match iter.next() {
-        None => return Err(Error::UnexpectedEOF),
-        Some(lex::Lex::Preposition(p)) => return Ok(*p),
-        _ => return Err(Error::SomethingWentWrong),
+    if let lex::Lex::Preposition(p) = iter.next().ok_or(Error::UnexpectedEOF)? {
+        return Ok(*p)} else {
+         return Err(Error::SomethingWentWrong)
     }
 }
 
