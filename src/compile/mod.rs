@@ -255,14 +255,15 @@ fn compile_math(env: &mut Env, math: &parse::MathKind, idents: &[parse::Identifi
         op.to_str(),
         right,
     );
-    env.shu1zhi1_reference.push(format!("_ans{}", env.ans_counter));
+    //env.shu1zhi1_reference.push(format!("_ans{}", env.ans_counter));
+    env.shu1zhi1_reference = vec![format!("_ans{}", env.ans_counter)];
 
     if idents.is_empty() {
         return r;
     } else if idents.len() > env.shu1zhi1_reference.len() {
         return "########poisoning the output########\nhaving more identifiers than there are values results in a mysterious compilation in the original implementation, which I do not intend to implement for now\n####################################".to_string()
     } else {
-        let mut res = r;
+        /*let mut res = r;
         for i in 0..idents.len() {
             let tmpvarname = env.shu1zhi1_reference[env.shu1zhi1_reference.len() - idents.len() + i].clone();
             res.push_str(&format!("{}let {}{} = {};\n",
@@ -277,7 +278,8 @@ fn compile_math(env: &mut Env, math: &parse::MathKind, idents: &[parse::Identifi
             ));
         }
         env.shu1zhi1_reference.truncate(env.shu1zhi1_reference.len() - idents.len());
-        return res;
+        return res;*/
+        return r;
     }
 }
 
