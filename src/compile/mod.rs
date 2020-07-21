@@ -216,36 +216,41 @@ fn compile_forenum(env: &Env, num: i64, statements: &[parse::Statement]) -> Stri
 /// leaving [_ans1, _ans2]; then, this is matched from the end by the second 名之曰,
 /// leaving [_ans1].
 
-
 fn compile_math(mut env: &mut Env, math: &parse::MathKind, idents: &[parse::Identifier]) -> String {
     fn compile_dataorqi2(env: &mut Env, a: &parse::DataOrQi2) -> String {
         match a {
             parse::DataOrQi2::Qi2 => {
                 let qi = env
-                .variables_not_yet_named
-                .last()
-                .unwrap_or(&"f64::NAN".to_string())
-                .to_string();
+                    .variables_not_yet_named
+                    .last()
+                    .unwrap_or(&"f64::NAN".to_string())
+                    .to_string();
 
                 //《文言陰符》曰『言「其」者。取至近之魚而棄其餘。』
                 env.variables_not_yet_named = vec![];
                 qi
-            },
+            }
             parse::DataOrQi2::Data(data) => compile_literal(&env, &data),
         }
     }
 
     let parse::MathKind::ArithBinaryMath(op, data1, prep, data2) = math;
 
-    let left = compile_dataorqi2(&mut env, match prep {
-        lex::Preposition::Yi3 => data1,
-        lex::Preposition::Yu2 => data2,
-    });
+    let left = compile_dataorqi2(
+        &mut env,
+        match prep {
+            lex::Preposition::Yi3 => data1,
+            lex::Preposition::Yu2 => data2,
+        },
+    );
 
-    let right = compile_dataorqi2(&mut env, match prep {
-        lex::Preposition::Yi3 => data2,
-        lex::Preposition::Yu2 => data1,
-    });
+    let right = compile_dataorqi2(
+        &mut env,
+        match prep {
+            lex::Preposition::Yi3 => data2,
+            lex::Preposition::Yu2 => data1,
+        },
+    );
 
     env.ans_counter += 1;
     let r = format!(
@@ -256,35 +261,43 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind, idents: &[parse::Iden
         op.to_str(),
         right,
     );
-    env.variables_not_yet_named.push(format!("_ans{}", env.ans_counter));
+    env.variables_not_yet_named
+        .push(format!("_ans{}", env.ans_counter));
 
     if idents.is_empty() {
         return r;
     } else if idents.len() > env.variables_not_yet_named.len() {
-        return "########poisoning the output########\nhaving more identifiers than there are values results in a mysterious compilation in the original implementation, which I do not intend to implement for now\n####################################".to_string()
+        return "########poisoning the output########\nhaving more identifiers than there are values results in a mysterious compilation in the original implementation, which I do not intend to implement for now\n####################################".to_string();
     } else {
         let mut res = r;
         for i in 0..idents.len() {
-            let tmpvarname = env.variables_not_yet_named[env.variables_not_yet_named.len() - idents.len() + i].clone();
-            res.push_str(&format!("{}let {}{} = {};\n",
-            "    ".repeat(env.indent_level),
-            if env.ident_map.is_mutable(&idents[i]) {
-                "mut "
-            } else {
-                ""
-            },
-            env.ident_map.translate_from_hanzi(&idents[i]),
-            tmpvarname.clone()
+            let tmpvarname = env.variables_not_yet_named
+                [env.variables_not_yet_named.len() - idents.len() + i]
+                .clone();
+            res.push_str(&format!(
+                "{}let {}{} = {};\n",
+                "    ".repeat(env.indent_level),
+                if env.ident_map.is_mutable(&idents[i]) {
+                    "mut "
+                } else {
+                    ""
+                },
+                env.ident_map.translate_from_hanzi(&idents[i]),
+                tmpvarname.clone()
             ));
         }
-        env.variables_not_yet_named.truncate(env.variables_not_yet_named.len() - idents.len());
+        env.variables_not_yet_named
+            .truncate(env.variables_not_yet_named.len() - idents.len());
         return res;
     }
 }
 
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
     match st {
-        parse::Statement::Flush => { env.variables_not_yet_named = vec![]; "".to_string() }
+        parse::Statement::Flush => {
+            env.variables_not_yet_named = vec![];
+            "".to_string()
+        }
         parse::Statement::Math { math, name_multi } => {
             return compile_math(&mut env, math, &name_multi);
         }

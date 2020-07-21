@@ -295,7 +295,7 @@ fn parse_statement(
 ) -> Result<Statement, Error> {
     let token = iter.next().ok_or(Error::UnexpectedEOF)?;
     match token {
-        lex::Lex::Yi1Flush => { return Ok(Statement::Flush) }
+        lex::Lex::Yi1Flush => return Ok(Statement::Flush),
         lex::Lex::ArithBinaryOp(op) => {
             let data1 = parse_data_or_qi2(&mut iter)?;
             let prep = parse_preposition(&mut iter)?;

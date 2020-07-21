@@ -29,7 +29,10 @@ mod tests {
         let mut contents2 = String::new();
         file2.read_to_string(&mut contents2).unwrap();
 
-        assert_eq!(str::replace(&compiled, "\r", ""), str::replace(&contents2, "\r", ""))
+        assert_eq!(
+            str::replace(&compiled, "\r", ""),
+            str::replace(&contents2, "\r", "")
+        )
     }
 
     #[test]
