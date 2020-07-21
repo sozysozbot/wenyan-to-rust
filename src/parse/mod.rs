@@ -32,7 +32,10 @@ pub enum Statement {
     },
     // Import,
     // Object,
-    // Reference,
+    Reference {
+        data: Data,
+        ident: Option<Identifier>,
+    },
     // Array,
     Flush,
     // Break,
@@ -66,7 +69,7 @@ impl DivBinaryOp {
 pub enum MathKind {
     ArithBinaryMath(lex::ArithBinaryOp, DataOrQi2, lex::Preposition, DataOrQi2),
     // ArithUnaryMath,
-    // BooleanAlgebra(Identifier, Identifier, LogicBinaryOp),
+    BooleanAlgebra(Identifier, Identifier, lex::LogicBinaryOp),
     ModMath(DivBinaryOp, DataOrQi2, lex::Preposition, DataOrQi2),
 }
 
@@ -127,7 +130,7 @@ fn interpret_intnum(num: &lex::IntNum) -> i64 {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum DataOrQi2 {
     Data(Data),
     Qi2,
@@ -322,11 +325,65 @@ fn parse_assign_after_xi1zhi1(
     }
 }
 
+fn parse_reference_statement_after_fu2(
+    mut iter: &mut peek_nth::PeekableNth<std::slice::Iter<'_, lex::Lex>>,
+) -> Result<Statement, Error> {
+    // reference_statement         : '夫' data ('之' (STRING_LITERAL|INT_NUM|'其餘'|IDENTIFIER|'長'))? name_single_statement? ;
+    let data = parse_data(&mut iter)?;
+    match iter.peek() {
+        Some(lex::Lex::Zhi1) => unimplemented!("夫 data 之 ..."),
+        Some(lex::Lex::Ming2Zhi1) => {
+            iter.next();
+            if let lex::Lex::Yue1 = iter.next().ok_or(Error::UnexpectedEOF)? {
+                if let lex::Lex::Identifier(ident) = iter.next().ok_or(Error::UnexpectedEOF)? {
+                    return Ok(Statement::Reference {
+                        data,
+                        ident: Some(Identifier(ident.to_string())),
+                    });
+                } else {
+                    return Err(Error::SomethingWentWrong);
+                }
+            } else {
+                return Err(Error::SomethingWentWrong);
+            }
+        }
+        _ => return Ok(Statement::Reference { data, ident: None }),
+    }
+}
+
 fn parse_statement(
     mut iter: &mut peek_nth::PeekableNth<std::slice::Iter<'_, lex::Lex>>,
 ) -> Result<Statement, Error> {
     let token = iter.next().ok_or(Error::UnexpectedEOF)?;
     match token {
+        lex::Lex::Fu2 => {
+            // two candidates:
+            // boolean_algebra_statement   : '夫' IDENTIFIER IDENTIFIER LOGIC_BINARY_OP ;
+            // reference_statement         : '夫' data ('之' (STRING_LITERAL|INT_NUM|'其餘'|IDENTIFIER|'長'))? name_single_statement? ;
+
+            match iter.peek() {
+                Some(lex::Lex::Identifier(ident)) => match iter.peek_nth(1) {
+                    Some(lex::Lex::Identifier(ident2)) => match iter.peek_nth(2) {
+                        Some(lex::Lex::LogicBinaryOp(op)) => {
+                            iter.next(); // first ident
+                            iter.next(); // second ident
+                            iter.next(); // operator
+                            return Ok(Statement::Math {
+                                math: MathKind::BooleanAlgebra(
+                                    Identifier(ident.to_string()),
+                                    Identifier(ident2.to_string()),
+                                    *op,
+                                ),
+                            });
+                        }
+                        _ => return parse_reference_statement_after_fu2(&mut iter),
+                    },
+                    _ => return parse_reference_statement_after_fu2(&mut iter),
+                },
+                None => return Err(Error::UnexpectedEOF),
+                Some(_) => return parse_reference_statement_after_fu2(&mut iter),
+            }
+        }
         lex::Lex::Chu2 => {
             let data1 = parse_data_or_qi2(&mut iter)?;
             let prep = parse_preposition(&mut iter)?;
@@ -422,7 +479,7 @@ fn parse_statement(
                 _ => return Err(Error::SomethingWentWrong),
             }
         }
-        _ => unimplemented!(),
+        a => unimplemented!("Parser encountered {:?}", a),
     }
 }
 

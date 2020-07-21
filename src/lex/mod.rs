@@ -85,7 +85,11 @@ pub enum Lex {
     /// 所餘幾何
     Suo3Yu2Ji3He2,
 
+    /// 夫
+    Fu2,
+
     ArithBinaryOp(ArithBinaryOp),
+    LogicBinaryOp(LogicBinaryOp),
 
     Type(Type),
     StringLiteral(String),
@@ -94,6 +98,22 @@ pub enum Lex {
     IntNum(IntNum),
     FloatNumKeywords(FloatNumKeywords),
     Preposition(Preposition),
+}
+
+#[derive(Eq, PartialEq, Debug, Clone, Copy)]
+pub enum LogicBinaryOp {
+    /// 中有陽乎
+    Zhong1You3Yang2Hu1,
+    /// 中無陰乎
+    Zhong1Wu2Yin1Hu1,
+}
+impl LogicBinaryOp {
+    pub fn to_str(self) -> &'static str {
+        match self {
+            LogicBinaryOp::Zhong1You3Yang2Hu1 => "||",
+            LogicBinaryOp::Zhong1Wu2Yin1Hu1 => "&&",
+        }
+    }
 }
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
@@ -385,6 +405,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
         }
 
         ans.push(match c {
+            '夫' => Lex::Fu2,
             '除' => Lex::Chu2,
             '噫' => Lex::Yi1Flush,
             '於' => Lex::Preposition(Preposition::Yu2),
@@ -407,6 +428,11 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
                 '嘗' => get_keyword(&mut iter, &['嘗', '觀'], Lex::Wu2Chang2Guan1)?,
                 a => return Err(Error::UnexpectedCharAfter('吾', a)),
             },
+            '中' => match iter.next().ok_or(Error::UnexpectedEOFAfter('中'))?{
+                '有' => get_keyword(&mut iter,  &['有', '陽', '乎'], Lex::LogicBinaryOp(LogicBinaryOp::Zhong1You3Yang2Hu1))?,
+                '無' => get_keyword(&mut iter,  &['無', '陰', '乎'], Lex::LogicBinaryOp(LogicBinaryOp::Zhong1Wu2Yin1Hu1))?,
+                a => return Err(Error::UnexpectedCharAfter('中', a)),
+            }
             '為' => get_keyword(&mut iter, &['為', '是'], Lex::Wei2Shi4)?,
             '昔' => get_keyword(&mut iter, &['昔', '之'], Lex::Xi1Zhi1)?,
             '云' => get_keyword(&mut iter, &['云', '云'], Lex::Yun2Yun2)?,

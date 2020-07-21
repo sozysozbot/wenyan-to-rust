@@ -212,25 +212,33 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind) -> String {
     }
 
     let (opstr, data1, prep, data2) = match math {
+        parse::MathKind::BooleanAlgebra(ident1, ident2, op) => (
+            op.to_str(),
+            parse::DataOrQi2::Data(parse::Data::Identifier(ident1.clone())),
+            lex::Preposition::Yi3, /* whichever is fine */
+            parse::DataOrQi2::Data(parse::Data::Identifier(ident2.clone())),
+        ),
         parse::MathKind::ArithBinaryMath(op, data1, prep, data2) => {
-            (op.to_str(), data1, prep, data2)
+            (op.to_str(), data1.clone(), *prep, data2.clone())
         }
-        parse::MathKind::ModMath(op, data1, prep, data2) => (op.to_str(), data1, prep, data2),
+        parse::MathKind::ModMath(op, data1, prep, data2) => {
+            (op.to_str(), data1.clone(), *prep, data2.clone())
+        }
     };
 
     let left = compile_dataorqi2(
         &mut env,
         match prep {
-            lex::Preposition::Yi3 => data1,
-            lex::Preposition::Yu2 => data2,
+            lex::Preposition::Yi3 => &data1,
+            lex::Preposition::Yu2 => &data2,
         },
     );
 
     let right = compile_dataorqi2(
         &mut env,
         match prep {
-            lex::Preposition::Yi3 => data2,
-            lex::Preposition::Yu2 => data1,
+            lex::Preposition::Yi3 => &data2,
+            lex::Preposition::Yu2 => &data1,
         },
     );
 
@@ -316,6 +324,7 @@ fn compile_name_multi_statement(mut env: &mut Env, idents: &[parse::Identifier])
 
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
     match st {
+        parse::Statement::Reference { data, ident } => unimplemented!("reference"),
         parse::Statement::NameMulti { idents } => {
             return compile_name_multi_statement(&mut env, &idents)
         }

@@ -81,6 +81,12 @@ impl IdentBiMap {
 
     fn insert_stmt(&mut self, st: &parse::Statement, conversion_table: &HashMap<String, String>) {
         match st {
+            parse::Statement::Reference { data, ident } => {
+                self.insert_dat(data, &conversion_table);
+                if let Some(i) = ident {
+                    self.insert_ident(i.clone(), &conversion_table)
+                }
+            }
             parse::Statement::NameMulti { idents } => {
                 for id in idents {
                     self.insert_ident(id.clone(), &conversion_table);
@@ -98,6 +104,12 @@ impl IdentBiMap {
                 if let parse::DataOrQi2::Data(d2) = data2 {
                     self.insert_dat(d2, &conversion_table);
                 }
+            }
+            parse::Statement::Math {
+                math: parse::MathKind::BooleanAlgebra(ident1, ident2, _),
+            } => {
+                self.insert_ident(ident1.clone(), &conversion_table);
+                self.insert_ident(ident2.clone(), &conversion_table);
             }
             parse::Statement::Assign { ident, data } => {
                 self.insert_ident(ident.clone(), &conversion_table);
