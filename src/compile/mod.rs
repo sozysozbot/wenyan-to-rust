@@ -212,8 +212,10 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind) -> String {
     }
 
     let (opstr, data1, prep, data2) = match math {
-         parse::MathKind::ArithBinaryMath(op, data1, prep, data2) => (op.to_str(), data1, prep, data2),
-         parse::MathKind::ModMath(op, data1, prep, data2) => (op.to_str(), data1, prep, data2)
+        parse::MathKind::ArithBinaryMath(op, data1, prep, data2) => {
+            (op.to_str(), data1, prep, data2)
+        }
+        parse::MathKind::ModMath(op, data1, prep, data2) => (op.to_str(), data1, prep, data2),
     };
 
     let left = compile_dataorqi2(

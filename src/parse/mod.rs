@@ -50,11 +50,11 @@ pub enum Statement {
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
 pub enum DivBinaryOp {
     Div,
-    Mod
+    Mod,
 }
 
 impl DivBinaryOp {
-   pub fn to_str(self) -> &'static str {
+    pub fn to_str(self) -> &'static str {
         match self {
             DivBinaryOp::Div => "/",
             DivBinaryOp::Mod => "%",
@@ -67,7 +67,7 @@ pub enum MathKind {
     ArithBinaryMath(lex::ArithBinaryOp, DataOrQi2, lex::Preposition, DataOrQi2),
     // ArithUnaryMath,
     // BooleanAlgebra(Identifier, Identifier, LogicBinaryOp),
-    ModMath(DivBinaryOp, DataOrQi2, lex::Preposition, DataOrQi2)
+    ModMath(DivBinaryOp, DataOrQi2, lex::Preposition, DataOrQi2),
 }
 
 #[derive(Debug)]
@@ -104,10 +104,22 @@ fn interpret_intnum(num: &lex::IntNum) -> i64 {
     match v.as_slice() {
         &[Ling2] => 0,
         &[IntDigit(d)] => d.to_num(),
+
         &[IntMult(Shi2)] => 10,
         &[IntMult(Shi2), IntDigit(d)] => 10 + d.to_num(),
         &[IntDigit(d), IntMult(Shi2)] => 10 * d.to_num(),
         &[IntDigit(d), IntMult(Shi2), IntDigit(e)] => 10 * d.to_num() + e.to_num(),
+
+        &[IntDigit(c), IntMult(Bai3), IntDigit(d), IntMult(Shi2), IntDigit(e)] => {
+            100 * c.to_num() + 10 * d.to_num() + e.to_num()
+        }
+        &[IntDigit(b), IntMult(Qian1), IntDigit(c), IntMult(Bai3), IntDigit(d), IntMult(Shi2), IntDigit(e)] => {
+            1000 * b.to_num() + 100 * c.to_num() + 10 * d.to_num() + e.to_num()
+        }
+        &[IntDigit(a), IntMult(Wan4), IntDigit(b), IntMult(Qian1), IntDigit(c), IntMult(Bai3), IntDigit(d), IntMult(Shi2), IntDigit(e)] => {
+            10000 * a.to_num() + 1000 * b.to_num() + 100 * c.to_num() + 10 * d.to_num() + e.to_num()
+        }
+
         &[IntMult(Qian1)] => 1000,
         _ => unimplemented!("parsing integer"),
     }
@@ -321,13 +333,13 @@ fn parse_statement(
             match iter.peek() {
                 Some(lex::Lex::Suo3Yu2Ji3He2) => {
                     iter.next();
-                    return Ok(Statement::Math{
-                        math: MathKind::ModMath(DivBinaryOp::Mod, data1, prep, data2)
-                    })
+                    return Ok(Statement::Math {
+                        math: MathKind::ModMath(DivBinaryOp::Mod, data1, prep, data2),
+                    });
                 }
                 _ => {
-                    return Ok(Statement::Math{
-                        math: MathKind::ModMath(DivBinaryOp::Div, data1, prep, data2)
+                    return Ok(Statement::Math {
+                        math: MathKind::ModMath(DivBinaryOp::Div, data1, prep, data2),
                     })
                 }
             }

@@ -88,7 +88,8 @@ impl IdentBiMap {
             }
             parse::Statement::Math {
                 math: parse::MathKind::ArithBinaryMath(_, data1, _, data2),
-            } | parse::Statement::Math {
+            }
+            | parse::Statement::Math {
                 math: parse::MathKind::ModMath(_, data1, _, data2),
             } => {
                 if let parse::DataOrQi2::Data(d1) = data1 {
