@@ -81,7 +81,7 @@ impl IdentBiMap {
 
     fn insert_stmt(&mut self, st: &parse::Statement, conversion_table: &HashMap<String, String>) {
         match st {
-            parse::Statement::Ming2Zhi1 {idents} => {
+            parse::Statement::NameMulti {idents} => {
                 for id in idents {
                     self.insert_ident(id.clone(), &conversion_table);
                 }

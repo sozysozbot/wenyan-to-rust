@@ -312,9 +312,9 @@ fn compile_name_multi_statement(mut env: &mut Env, idents: &[parse::Identifier])
 
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
     match st {
-        parse::Statement::Ming2Zhi1 { idents } => {
+        parse::Statement::NameMulti { idents } => {
             return compile_name_multi_statement(&mut env, &idents)
-        } 
+        }
         parse::Statement::Flush => {
             env.variables_not_yet_named = vec![];
             "".to_string()
