@@ -7,6 +7,7 @@ struct Env {
     rand_counter: usize,
     indent_level: usize,
     shu1zhi1_reference: Vec<String>,
+    ming2zhi1_reference: Vec<String>,
     ident_map: identbimap::IdentBiMap,
 }
 
@@ -116,7 +117,8 @@ fn compile_define(
             }
         }
     }
-    env.shu1zhi1_reference = new_shu1zhi1;
+    env.shu1zhi1_reference = new_shu1zhi1.clone();
+    env.ming2zhi1_reference = new_shu1zhi1;
 
     ans
 }
@@ -151,6 +153,7 @@ fn compile_forenum(env: &Env, num: i64, statements: &[parse::Statement]) -> Stri
         /// };
         /// ```
         shu1zhi1_reference: env.shu1zhi1_reference.clone(),
+        ming2zhi1_reference: env.ming2zhi1_reference.clone()
     };
     for st in statements {
         inner.push_str(&compile_statement(&mut new_env, &st));
@@ -255,17 +258,17 @@ fn compile_math(env: &mut Env, math: &parse::MathKind, idents: &[parse::Identifi
         op.to_str(),
         right,
     );
-    //env.shu1zhi1_reference.push(format!("_ans{}", env.ans_counter));
+    env.ming2zhi1_reference.push(format!("_ans{}", env.ans_counter));
     env.shu1zhi1_reference = vec![format!("_ans{}", env.ans_counter)];
 
     if idents.is_empty() {
         return r;
-    } else if idents.len() > env.shu1zhi1_reference.len() {
+    } else if idents.len() > env.ming2zhi1_reference.len() {
         return "########poisoning the output########\nhaving more identifiers than there are values results in a mysterious compilation in the original implementation, which I do not intend to implement for now\n####################################".to_string()
     } else {
-        /*let mut res = r;
+        let mut res = r;
         for i in 0..idents.len() {
-            let tmpvarname = env.shu1zhi1_reference[env.shu1zhi1_reference.len() - idents.len() + i].clone();
+            let tmpvarname = env.ming2zhi1_reference[env.ming2zhi1_reference.len() - idents.len() + i].clone();
             res.push_str(&format!("{}let {}{} = {};\n",
             "    ".repeat(env.indent_level),
             if env.ident_map.is_mutable(&idents[i]) {
@@ -277,9 +280,9 @@ fn compile_math(env: &mut Env, math: &parse::MathKind, idents: &[parse::Identifi
             tmpvarname.clone()
             ));
         }
-        env.shu1zhi1_reference.truncate(env.shu1zhi1_reference.len() - idents.len());
-        return res;*/
-        return r;
+        env.ming2zhi1_reference.truncate(env.ming2zhi1_reference.len() - idents.len());
+        env.shu1zhi1_reference = env.ming2zhi1_reference.clone();
+        return res;
     }
 }
 
@@ -396,6 +399,7 @@ fn compile_forenum_ident(
 
         // shu1zhi1_reference must be inherited
         shu1zhi1_reference: env.shu1zhi1_reference.clone(),
+        ming2zhi1_reference: env.ming2zhi1_reference.clone()
     };
     for st in statements {
         inner.push_str(&compile_statement(&mut new_env, &st));
@@ -426,6 +430,7 @@ pub fn compile(
         rand_counter: 0,
         indent_level: 1,
         shu1zhi1_reference: vec![],
+        ming2zhi1_reference: vec![],
         ident_map: identbimap::IdentBiMap::new(&parsed, &conversion_table),
     };
 
