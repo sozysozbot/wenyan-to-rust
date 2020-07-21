@@ -6,8 +6,7 @@ struct Env {
     ans_counter: usize,
     rand_counter: usize,
     indent_level: usize,
-    shu1zhi1_reference: Vec<String>,
-    ming2zhi1_reference: Vec<String>,
+    variables_not_yet_named: Vec<String>,
     ident_map: identbimap::IdentBiMap,
 }
 
@@ -88,11 +87,11 @@ fn compile_define(
     } = decl;
     let mut ans = String::new();
 
-    let mut new_shu1zhi1 = vec![];
+    let mut new_zhi1 = vec![];
     for i in 0..*how_many_variables {
         match idents.get(i) {
             None => {
-                // no more ident; ans_counter and shu1zhi1_reference come into play
+                // no more ident; ans_counter and variables_not_yet_named come into play
                 env.ans_counter += 1;
                 ans.push_str(&format!(
                     "{}let _ans{} = {};\n",
@@ -100,7 +99,7 @@ fn compile_define(
                     env.ans_counter,
                     compile_optional_literal(&env, data_arr.get(i), *type_)
                 ));
-                new_shu1zhi1.push(format!("_ans{}", env.ans_counter));
+                new_zhi1.push(format!("_ans{}", env.ans_counter));
             }
             Some(ident) => {
                 ans.push_str(&format!(
@@ -117,8 +116,8 @@ fn compile_define(
             }
         }
     }
-    env.shu1zhi1_reference = new_shu1zhi1.clone();
-    env.ming2zhi1_reference = new_shu1zhi1;
+    env.variables_not_yet_named = new_zhi1.clone();
+    env.variables_not_yet_named = new_zhi1;
 
     ans
 }
@@ -131,7 +130,7 @@ fn compile_forenum(env: &Env, num: i64, statements: &[parse::Statement]) -> Stri
         ans_counter: env.ans_counter,
         ident_map: env.ident_map.clone(),
 
-        /// shu1zhi1_reference must be inherited, since in the original compiler
+        /// variables_not_yet_named must be inherited, since in the original compiler
         ///
         /// ```
         /// 吾有二言。曰「「天地。」」。
@@ -152,8 +151,7 @@ fn compile_forenum(env: &Env, num: i64, statements: &[parse::Statement]) -> Stri
         ///   console.log(_ans3);
         /// };
         /// ```
-        shu1zhi1_reference: env.shu1zhi1_reference.clone(),
-        ming2zhi1_reference: env.ming2zhi1_reference.clone()
+        variables_not_yet_named: env.variables_not_yet_named.clone(),
     };
     for st in statements {
         inner.push_str(&compile_statement(&mut new_env, &st));
@@ -224,13 +222,13 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind, idents: &[parse::Iden
         match a {
             parse::DataOrQi2::Qi2 => {
                 let qi = env
-                .shu1zhi1_reference
+                .variables_not_yet_named
                 .last()
                 .unwrap_or(&"f64::NAN".to_string())
                 .to_string();
 
                 //《文言陰符》曰『言「其」者。取至近之魚而棄其餘。』
-                env.shu1zhi1_reference = vec![];
+                env.variables_not_yet_named = vec![];
                 qi
             },
             parse::DataOrQi2::Data(data) => compile_literal(&env, &data),
@@ -243,7 +241,7 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind, idents: &[parse::Iden
         lex::Preposition::Yi3 => data1,
         lex::Preposition::Yu2 => data2,
     });
-    
+
     let right = compile_dataorqi2(&mut env, match prep {
         lex::Preposition::Yi3 => data2,
         lex::Preposition::Yu2 => data1,
@@ -258,17 +256,16 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind, idents: &[parse::Iden
         op.to_str(),
         right,
     );
-    env.ming2zhi1_reference.push(format!("_ans{}", env.ans_counter));
-    env.shu1zhi1_reference = vec![format!("_ans{}", env.ans_counter)];
+    env.variables_not_yet_named.push(format!("_ans{}", env.ans_counter));
 
     if idents.is_empty() {
         return r;
-    } else if idents.len() > env.ming2zhi1_reference.len() {
+    } else if idents.len() > env.variables_not_yet_named.len() {
         return "########poisoning the output########\nhaving more identifiers than there are values results in a mysterious compilation in the original implementation, which I do not intend to implement for now\n####################################".to_string()
     } else {
         let mut res = r;
         for i in 0..idents.len() {
-            let tmpvarname = env.ming2zhi1_reference[env.ming2zhi1_reference.len() - idents.len() + i].clone();
+            let tmpvarname = env.variables_not_yet_named[env.variables_not_yet_named.len() - idents.len() + i].clone();
             res.push_str(&format!("{}let {}{} = {};\n",
             "    ".repeat(env.indent_level),
             if env.ident_map.is_mutable(&idents[i]) {
@@ -280,8 +277,7 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind, idents: &[parse::Iden
             tmpvarname.clone()
             ));
         }
-        env.ming2zhi1_reference.truncate(env.ming2zhi1_reference.len() - idents.len());
-        env.shu1zhi1_reference = env.ming2zhi1_reference.clone();
+        env.variables_not_yet_named.truncate(env.variables_not_yet_named.len() - idents.len());
         return res;
     }
 }
@@ -297,7 +293,7 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
             data_arr,
         }) => {
             let mut r = String::new();
-            let mut new_shu1zhi1 = vec![];
+            let mut new_zhi1 = vec![];
             for i in 0..*how_many_variables {
                 env.ans_counter += 1;
                 r.push_str(&format!(
@@ -306,26 +302,25 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
                     env.ans_counter,
                     compile_optional_literal(&env, data_arr.get(i), *type_)
                 ));
-                new_shu1zhi1.push(format!("_ans{}", env.ans_counter));
+                new_zhi1.push(format!("_ans{}", env.ans_counter));
             }
-            env.shu1zhi1_reference = new_shu1zhi1;
+            env.variables_not_yet_named = new_zhi1;
             return r;
         }
         parse::Statement::Print => {
             let mut r = format!(
                 "{}println!(\"{}\"",
                 "    ".repeat(env.indent_level),
-                "{} ".repeat(env.shu1zhi1_reference.len()).trim_end(),
+                "{} ".repeat(env.variables_not_yet_named.len()).trim_end(),
             );
 
-            for varname in &env.shu1zhi1_reference {
+            for varname in &env.variables_not_yet_named {
                 r.push_str(", ");
                 r.push_str(varname);
             }
 
             r.push_str(");\n");
-            env.shu1zhi1_reference = vec![];
-            env.ming2zhi1_reference = vec![];
+            env.variables_not_yet_named = vec![];
             return r;
         }
         parse::Statement::Assign { ident, data } => {
@@ -348,7 +343,7 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
                 env.ident_map.translate_from_hanzi(&name),
                 compile_optional_literal(&env, Some(data), *type_)
             );
-            // must inherit shu1zhi1_reference
+            // must inherit variables_not_yet_named
             // example:
             // ```
             // 吾有一數。曰四。 減其於七。
@@ -398,9 +393,8 @@ fn compile_forenum_ident(
         rand_counter: env.rand_counter,
         ident_map: env.ident_map.clone(),
 
-        // shu1zhi1_reference must be inherited
-        shu1zhi1_reference: env.shu1zhi1_reference.clone(),
-        ming2zhi1_reference: env.ming2zhi1_reference.clone()
+        // variables_not_yet_named must be inherited
+        variables_not_yet_named: env.variables_not_yet_named.clone(),
     };
     for st in statements {
         inner.push_str(&compile_statement(&mut new_env, &st));
@@ -430,8 +424,7 @@ pub fn compile(
         ans_counter: 0,
         rand_counter: 0,
         indent_level: 1,
-        shu1zhi1_reference: vec![],
-        ming2zhi1_reference: vec![],
+        variables_not_yet_named: vec![],
         ident_map: identbimap::IdentBiMap::new(&parsed, &conversion_table),
     };
 
