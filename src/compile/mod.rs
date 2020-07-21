@@ -87,7 +87,6 @@ fn compile_define(
     } = decl;
     let mut ans = String::new();
 
-    let mut new_zhi1 = vec![];
     for i in 0..*how_many_variables {
         match idents.get(i) {
             None => {
@@ -99,7 +98,7 @@ fn compile_define(
                     env.ans_counter,
                     compile_optional_literal(&env, data_arr.get(i), *type_)
                 ));
-                new_zhi1.push(format!("_ans{}", env.ans_counter));
+                env.variables_not_yet_named.push(format!("_ans{}", env.ans_counter));
             }
             Some(ident) => {
                 ans.push_str(&format!(
@@ -116,8 +115,6 @@ fn compile_define(
             }
         }
     }
-    env.variables_not_yet_named = new_zhi1.clone();
-    env.variables_not_yet_named = new_zhi1;
 
     ans
 }
@@ -371,7 +368,6 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
             data_arr,
         }) => {
             let mut r = String::new();
-            let mut new_zhi1 = vec![];
             for i in 0..*how_many_variables {
                 env.ans_counter += 1;
                 r.push_str(&format!(
@@ -380,9 +376,8 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
                     env.ans_counter,
                     compile_optional_literal(&env, data_arr.get(i), *type_)
                 ));
-                new_zhi1.push(format!("_ans{}", env.ans_counter));
+                env.variables_not_yet_named.push(format!("_ans{}", env.ans_counter));
             }
-            env.variables_not_yet_named = new_zhi1; /* POSSIBLY FIXME */
             return r;
         }
         parse::Statement::Print => {
