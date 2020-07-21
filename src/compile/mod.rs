@@ -281,7 +281,7 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind, idents: &[parse::Iden
         } else {
             let tmpvarname = env.variables_not_yet_named
                 [env.variables_not_yet_named.len() + i - idents.len()]
-                .clone();
+            .clone();
             res.push_str(&format!(
                 "{}let {}{} = {};\n",
                 "    ".repeat(env.indent_level),
@@ -297,11 +297,11 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind, idents: &[parse::Iden
     }
     if env.variables_not_yet_named.len() > idents.len() {
         env.variables_not_yet_named
-        .truncate(env.variables_not_yet_named.len() - idents.len());
+            .truncate(env.variables_not_yet_named.len() - idents.len());
     } else {
         env.variables_not_yet_named = vec![]
     }
-    
+
     return res;
 }
 

@@ -189,7 +189,7 @@ fn parse_init_define_statement_after_you3(
                     _ => return Err(Error::SomethingWentWrong),
                 }
             }
-            _ => panic!("If this message is obtained by a wenyan program that successfully compiles in the original edition, please submit an issue."),
+            Some(..) => panic!("If this message is obtained by a wenyan program that successfully compiles in the original edition, please submit an issue."),
         }
     } else {
         return Err(Error::SomethingWentWrong);

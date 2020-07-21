@@ -477,7 +477,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
             },
             '零' | '一' | '二' | '三' | '四' | '五' | '六' | '七' | '八' | '九' | '十' | '百'
             | '千' | '萬' | '億' | '兆' | '京' | '垓' | '秭' | '穣' | '溝' | '澗' | '正' | '載'
-            | '極' => (lex_int_num(c, &mut iter)?),
+            | '極' => lex_int_num(c, &mut iter)?,
             '分' | '釐' | '毫' | '絲' | '忽' | '微' | '纖' | '沙' | '塵' | '埃' | '渺' | '漠' => {
                 Lex::FloatNumKeywords(FloatNumKeywords::from_char(c).expect("Cannot happen"))
             }
