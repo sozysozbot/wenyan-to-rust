@@ -25,7 +25,7 @@ pub enum Statement {
     // Return,
     Math {
         math: MathKind,
-        // name_multi: Vec<Identifier>, // FIXME
+        name_multi: Vec<Identifier>,
     },
     Assign {
         ident: Identifier,
@@ -302,7 +302,12 @@ fn parse_statement(
 
             return Ok(Statement::Math {
                 math: MathKind::ArithBinaryMath(*op, data1, prep, data2),
-                // name_multi: vec![], // FIXME TODO
+                name_multi: if let Some(lex::Lex::Ming2Zhi1) = iter.peek() {
+                    iter.next();
+                    parse_name_multi_statement_after_ming2zhi1(&mut iter)?
+                } else {
+                    vec![]
+                },
             });
         }
         lex::Lex::You3 => {
@@ -350,31 +355,7 @@ fn parse_statement(
 
                             if let Some(lex::Lex::Ming2Zhi1) = iter.peek() {
                                 iter.next();
-
-                                // ('曰' IDENTIFIER)+
-
-                                let mut idents = vec![];
-
-                                loop {
-                                    match iter.peek() {
-                                        Some(lex::Lex::Yue1) => {
-                                            iter.next();
-                                            if let lex::Lex::Identifier(ident) =
-                                                iter.next().ok_or(Error::UnexpectedEOF)?
-                                            {
-                                                idents.push(Identifier(ident.clone()));
-                                            } else {
-                                                return Err(Error::SomethingWentWrong);
-                                            }
-                                        }
-                                        _ => break,
-                                    }
-                                }
-
-                                if idents.is_empty() {
-                                    return Err(Error::SomethingWentWrong); // we need at least one 曰 now that we have seen 名之
-                                }
-
+                                let idents = parse_name_multi_statement_after_ming2zhi1(&mut iter)?;
                                 return Ok(Statement::Define {
                                     decl: declare,
                                     idents: idents,
@@ -391,6 +372,34 @@ fn parse_statement(
         }
         _ => unimplemented!(),
     }
+}
+
+fn parse_name_multi_statement_after_ming2zhi1(
+    iter: &mut peek_nth::PeekableNth<std::slice::Iter<'_, lex::Lex>>,
+) -> Result<Vec<Identifier>, Error> {
+    // ('曰' IDENTIFIER)+
+
+    let mut idents = vec![];
+
+    loop {
+        match iter.peek() {
+            Some(lex::Lex::Yue1) => {
+                iter.next();
+                if let lex::Lex::Identifier(ident) = iter.next().ok_or(Error::UnexpectedEOF)? {
+                    idents.push(Identifier(ident.clone()));
+                } else {
+                    return Err(Error::SomethingWentWrong);
+                }
+            }
+            _ => break,
+        }
+    }
+
+    if idents.is_empty() {
+        return Err(Error::SomethingWentWrong); // we need at least one 曰 now that we have seen 名之
+    }
+
+    return Ok(idents);
 }
 
 use peek_nth::IteratorExt;

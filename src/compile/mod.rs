@@ -7,6 +7,7 @@ struct Env {
     rand_counter: usize,
     indent_level: usize,
     shu1zhi1_reference: Vec<String>,
+    ming2zhi1_reference: Vec<String>,
     ident_map: identbimap::IdentBiMap,
 }
 
@@ -116,7 +117,8 @@ fn compile_define(
             }
         }
     }
-    env.shu1zhi1_reference = new_shu1zhi1;
+    env.shu1zhi1_reference = new_shu1zhi1.clone();
+    env.ming2zhi1_reference = new_shu1zhi1;
 
     ans
 }
@@ -151,6 +153,7 @@ fn compile_forenum(env: &Env, num: i64, statements: &[parse::Statement]) -> Stri
         /// };
         /// ```
         shu1zhi1_reference: env.shu1zhi1_reference.clone(),
+        ming2zhi1_reference: env.ming2zhi1_reference.clone()
     };
     for st in statements {
         inner.push_str(&compile_statement(&mut new_env, &st));
@@ -164,7 +167,59 @@ fn compile_forenum(env: &Env, num: i64, statements: &[parse::Statement]) -> Stri
     );
 }
 
-fn compile_math(env: &mut Env, math: &parse::MathKind) -> String {
+/// 吾有三數。曰三曰五曰二名之曰「甲」。加其以五。
+/// is to be translated as
+/// ```
+/// var 甲 = 3;
+/// var _ans1 = 5;
+/// var _ans2 = 2;
+/// const _ans3 = _ans2 + 5;
+/// ```
+
+/// 加其以五。書之。
+/// is to be translated as
+/// ```
+/// const _ans1 = undefined + 5;
+/// console.log(_ans1);
+/// ```
+/// Thus, when we do not have anything to reference, I must pad with `f64::NAN`
+
+/// Both
+/// 加一以三。加二以三。減其以其
+/// and
+/// 加一以三。加二以三。減其於其
+/// are compiled to
+/// ```
+/// const _ans1 = 1 + 3;
+/// const _ans2 = 2 + 3;
+/// const _ans3 = _ans2 - undefined;
+/// ```
+
+/// 加一以三。加六以九。名之曰「甲」。曰「乙」。
+/// is to be translated as
+/// ```
+/// const _ans1 = 1 + 3;
+/// const _ans2 = 6 + 9;
+/// var JIA3 = _ans1;
+/// var YI3 = _ans2;
+/// ```
+
+/// 加二以三。加一以三。加三以三。名之曰「甲」。名之曰「乙」。書之
+/// is to be translated as
+/// ```
+/// const _ans1 = 2 + 3;
+/// const _ans2 = 1 + 3;
+/// const _ans3 = 3 + 3;
+/// var JIA3 = _ans3;
+/// var YI3 = _ans2;
+/// console.log(_ans1);
+/// ```
+/// That is, [_ans1, _ans2, _ans3] is matched from the end by the first 名之曰,
+/// leaving [_ans1, _ans2]; then, this is matched from the end by the second 名之曰,
+/// leaving [_ans1].
+
+
+fn compile_math(env: &mut Env, math: &parse::MathKind, idents: &[parse::Identifier]) -> String {
     fn compile_dataorqi2(env: &Env, a: &parse::DataOrQi2) -> String {
         match a {
             parse::DataOrQi2::Qi2 => env
@@ -177,33 +232,6 @@ fn compile_math(env: &mut Env, math: &parse::MathKind) -> String {
     }
 
     let parse::MathKind::ArithBinaryMath(op, data1, prep, data2) = math;
-    // 吾有三數。曰三曰五曰二名之曰「甲」。加其以五。
-    // is to be translated as
-    // ```
-    // var 甲 = 3;
-    // var _ans1 = 5;
-    // var _ans2 = 2;
-    // const _ans3 = _ans2 + 5;
-    // ```
-
-    // 加其以五。書之。
-    // is to be translated as
-    // ```
-    // const _ans1 = undefined + 5;
-    // console.log(_ans1);
-    // ```
-    // Thus, when we do not have anything to reference, I must pad with f64::NAN
-
-    // Both
-    // 加一以三。加二以三。減其以其
-    // and
-    // 加一以三。加二以三。減其於其
-    // are compiled to
-    // ```
-    // const _ans1 = 1 + 3;
-    // const _ans2 = 2 + 3;
-    // const _ans3 = _ans2 - undefined;
-    // ```
 
     let left = match prep {
         lex::Preposition::Yi3 => data1,
@@ -230,14 +258,38 @@ fn compile_math(env: &mut Env, math: &parse::MathKind) -> String {
         op.to_str(),
         right,
     );
+    env.ming2zhi1_reference.push(format!("_ans{}", env.ans_counter));
     env.shu1zhi1_reference = vec![format!("_ans{}", env.ans_counter)];
-    return r;
+
+    if idents.is_empty() {
+        return r;
+    } else if idents.len() > env.ming2zhi1_reference.len() {
+        return "########poisoning the output########\nhaving more identifiers than there are values results in a mysterious compilation in the original implementation, which I do not intend to implement for now\n####################################".to_string()
+    } else {
+        let mut res = r;
+        for i in 0..idents.len() {
+            let tmpvarname = env.ming2zhi1_reference[env.ming2zhi1_reference.len() - idents.len() + i].clone();
+            res.push_str(&format!("{}let {}{} = {};\n",
+            "    ".repeat(env.indent_level),
+            if env.ident_map.is_mutable(&idents[i]) {
+                "mut "
+            } else {
+                ""
+            },
+            env.ident_map.translate_from_hanzi(&idents[i]),
+            tmpvarname.clone()
+            ));
+        }
+        env.ming2zhi1_reference.truncate(env.ming2zhi1_reference.len() - idents.len());
+        env.shu1zhi1_reference = env.ming2zhi1_reference.clone();
+        return res;
+    }
 }
 
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
     match st {
-        parse::Statement::Math { math } => {
-            return compile_math(&mut env, math);
+        parse::Statement::Math { math, name_multi } => {
+            return compile_math(&mut env, math, &name_multi);
         }
         parse::Statement::Declare(parse::DeclareStatement {
             how_many_variables,
@@ -347,6 +399,7 @@ fn compile_forenum_ident(
 
         // shu1zhi1_reference must be inherited
         shu1zhi1_reference: env.shu1zhi1_reference.clone(),
+        ming2zhi1_reference: env.ming2zhi1_reference.clone()
     };
     for st in statements {
         inner.push_str(&compile_statement(&mut new_env, &st));
@@ -377,6 +430,7 @@ pub fn compile(
         rand_counter: 0,
         indent_level: 1,
         shu1zhi1_reference: vec![],
+        ming2zhi1_reference: vec![],
         ident_map: identbimap::IdentBiMap::new(&parsed, &conversion_table),
     };
 
