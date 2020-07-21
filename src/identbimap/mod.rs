@@ -88,16 +88,12 @@ impl IdentBiMap {
             }
             parse::Statement::Math {
                 math: parse::MathKind::ArithBinaryMath(_, data1, _, data2),
-                name_multi: idents,
             } => {
                 if let parse::DataOrQi2::Data(d1) = data1 {
                     self.insert_dat(d1, &conversion_table);
                 }
                 if let parse::DataOrQi2::Data(d2) = data2 {
                     self.insert_dat(d2, &conversion_table);
-                }
-                for id in idents {
-                    self.insert_ident(id.clone(), &conversion_table);
                 }
             }
             parse::Statement::Assign { ident, data } => {

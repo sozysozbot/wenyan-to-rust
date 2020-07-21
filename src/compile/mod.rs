@@ -193,30 +193,7 @@ fn compile_forenum(env: &Env, num: i64, statements: &[parse::Statement]) -> Stri
 /// const _ans3 = _ans2 - undefined;
 /// ```
 
-/// 加一以三。加六以九。名之曰「甲」。曰「乙」。
-/// is to be translated as
-/// ```
-/// const _ans1 = 1 + 3;
-/// const _ans2 = 6 + 9;
-/// var JIA3 = _ans1;
-/// var YI3 = _ans2;
-/// ```
-
-/// 加二以三。加一以三。加三以三。名之曰「甲」。名之曰「乙」。書之
-/// is to be translated as
-/// ```
-/// const _ans1 = 2 + 3;
-/// const _ans2 = 1 + 3;
-/// const _ans3 = 3 + 3;
-/// var JIA3 = _ans3;
-/// var YI3 = _ans2;
-/// console.log(_ans1);
-/// ```
-/// That is, [_ans1, _ans2, _ans3] is matched from the end by the first 名之曰,
-/// leaving [_ans1, _ans2]; then, this is matched from the end by the second 名之曰,
-/// leaving [_ans1].
-
-fn compile_math(mut env: &mut Env, math: &parse::MathKind, idents: &[parse::Identifier]) -> String {
+fn compile_math(mut env: &mut Env, math: &parse::MathKind) -> String {
     fn compile_dataorqi2(env: &mut Env, a: &parse::DataOrQi2) -> String {
         match a {
             parse::DataOrQi2::Qi2 => {
@@ -253,7 +230,7 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind, idents: &[parse::Iden
     );
 
     env.ans_counter += 1;
-    let mut r = format!(
+    let r = format!(
         "{}let _ans{} = {} {} {};\n",
         "    ".repeat(env.indent_level),
         env.ans_counter,
@@ -264,9 +241,31 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind, idents: &[parse::Iden
     env.variables_not_yet_named
         .push(format!("_ans{}", env.ans_counter));
 
-    r.push_str(&compile_name_multi_statement(&mut env, &idents));
     return r;
 }
+
+/// 加一以三。加六以九。名之曰「甲」。曰「乙」。
+/// is to be translated as
+/// ```
+/// const _ans1 = 1 + 3;
+/// const _ans2 = 6 + 9;
+/// var JIA3 = _ans1;
+/// var YI3 = _ans2;
+/// ```
+
+/// 加二以三。加一以三。加三以三。名之曰「甲」。名之曰「乙」。書之
+/// is to be translated as
+/// ```
+/// const _ans1 = 2 + 3;
+/// const _ans2 = 1 + 3;
+/// const _ans3 = 3 + 3;
+/// var JIA3 = _ans3;
+/// var YI3 = _ans2;
+/// console.log(_ans1);
+/// ```
+/// That is, [_ans1, _ans2, _ans3] is matched from the end by the first 名之曰,
+/// leaving [_ans1, _ans2]; then, this is matched from the end by the second 名之曰,
+/// leaving [_ans1].
 
 fn compile_name_multi_statement(mut env: &mut Env, idents: &[parse::Identifier]) -> String {
     let mut res = String::new();
@@ -319,8 +318,8 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
             env.variables_not_yet_named = vec![];
             "".to_string()
         }
-        parse::Statement::Math { math, name_multi } => {
-            return compile_math(&mut env, math, &name_multi);
+        parse::Statement::Math { math } => {
+            return compile_math(&mut env, math);
         }
         parse::Statement::Declare(parse::DeclareStatement {
             how_many_variables,
