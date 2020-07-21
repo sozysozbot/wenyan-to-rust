@@ -264,15 +264,23 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind, idents: &[parse::Iden
     env.variables_not_yet_named
         .push(format!("_ans{}", env.ans_counter));
 
-    if idents.is_empty() {
-        return r;
-    } else if idents.len() > env.variables_not_yet_named.len() {
-        return "########poisoning the output########\nhaving more identifiers than there are values results in a mysterious compilation in the original implementation, which I do not intend to implement for now\n####################################".to_string();
-    } else {
-        let mut res = r;
-        for i in 0..idents.len() {
+    let mut res = r;
+    for i in 0..idents.len() {
+        if env.variables_not_yet_named.len() + i < idents.len() {
+            // negative index is to be filled with undefined
+            res.push_str(&format!(
+                "{}let {}{} : (); // undefined\n",
+                "    ".repeat(env.indent_level),
+                if env.ident_map.is_mutable(&idents[i]) {
+                    "mut "
+                } else {
+                    ""
+                },
+                env.ident_map.translate_from_hanzi(&idents[i])
+            ));
+        } else {
             let tmpvarname = env.variables_not_yet_named
-                [env.variables_not_yet_named.len() - idents.len() + i]
+                [env.variables_not_yet_named.len() + i - idents.len()]
                 .clone();
             res.push_str(&format!(
                 "{}let {}{} = {};\n",
@@ -286,10 +294,15 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind, idents: &[parse::Iden
                 tmpvarname.clone()
             ));
         }
-        env.variables_not_yet_named
-            .truncate(env.variables_not_yet_named.len() - idents.len());
-        return res;
     }
+    if env.variables_not_yet_named.len() > idents.len() {
+        env.variables_not_yet_named
+        .truncate(env.variables_not_yet_named.len() - idents.len());
+    } else {
+        env.variables_not_yet_named = vec![]
+    }
+    
+    return res;
 }
 
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {

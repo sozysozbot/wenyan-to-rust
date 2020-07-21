@@ -156,8 +156,8 @@ mod tests {
         test("test026")
     }
     #[test]
-    fn sketchy001() {
-        test("sketchy001")
+    fn test027() {
+        test("test027")
     }
     #[test]
     fn test028() {
@@ -178,6 +178,10 @@ mod tests {
     #[test]
     fn test032() {
         test("test032")
+    }
+    #[test]
+    fn test033() {
+        test("test033")
     }
 }
 
