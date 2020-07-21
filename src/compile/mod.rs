@@ -239,18 +239,15 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind, idents: &[parse::Iden
 
     let parse::MathKind::ArithBinaryMath(op, data1, prep, data2) = math;
 
-    let left = match prep {
+    let left = compile_dataorqi2(&mut env, match prep {
         lex::Preposition::Yi3 => data1,
         lex::Preposition::Yu2 => data2,
-    };
-    let right = match prep {
+    });
+    
+    let right = compile_dataorqi2(&mut env, match prep {
         lex::Preposition::Yi3 => data2,
         lex::Preposition::Yu2 => data1,
-    };
-
-    let (left, right) = match (left, right) {
-        (a, b) => (compile_dataorqi2(&mut env, a), compile_dataorqi2(&mut env, b)),
-    };
+    });
 
     env.ans_counter += 1;
     let r = format!(
