@@ -76,6 +76,9 @@ pub enum Lex {
     /// 以施
     Yi3Shi1,
 
+    /// 噫
+    Yi1Flush,
+
     ArithBinaryOp(ArithBinaryOp),
 
     Type(Type),
@@ -376,6 +379,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
         }
 
         ans.push(match c {
+            '噫' => Lex::Yi1Flush,
             '於' => Lex::Preposition(Preposition::Yu2),
             '加' => Lex::ArithBinaryOp(ArithBinaryOp::Jia1),
             '減' => Lex::ArithBinaryOp(ArithBinaryOp::Jian3),

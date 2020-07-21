@@ -1,6 +1,6 @@
 # wenyan-to-rust
 
-Finished 明義第一.
+Finished 變數第二.
 
 ## samples
 
@@ -72,7 +72,7 @@ fn main() {
 }
 ```
 
-### test027.wy
+### sketchy001.wy
 ```
 加一以三。加二以三。減其以其。
 加一以三。加二以三。減其於其。

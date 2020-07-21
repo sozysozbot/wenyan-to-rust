@@ -284,6 +284,7 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind, idents: &[parse::Iden
 
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
     match st {
+        parse::Statement::Flush => { env.variables_not_yet_named = vec![]; "".to_string() }
         parse::Statement::Math { math, name_multi } => {
             return compile_math(&mut env, math, &name_multi);
         }

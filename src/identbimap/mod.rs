@@ -101,6 +101,7 @@ impl IdentBiMap {
                 self.insert_dat(data, &conversion_table);
             }
             parse::Statement::Print => {}
+            parse::Statement::Flush => {}
             parse::Statement::ForEnum { statements, num: _ } => {
                 for s in statements {
                     self.insert_stmt(&s, &conversion_table)
