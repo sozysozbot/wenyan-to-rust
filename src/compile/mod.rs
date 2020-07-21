@@ -325,6 +325,7 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
 
             r.push_str(");\n");
             env.shu1zhi1_reference = vec![];
+            env.ming2zhi1_reference = vec![];
             return r;
         }
         parse::Statement::Assign { ident, data } => {
