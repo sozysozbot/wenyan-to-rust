@@ -219,14 +219,20 @@ fn compile_forenum(env: &Env, num: i64, statements: &[parse::Statement]) -> Stri
 /// leaving [_ans1].
 
 
-fn compile_math(env: &mut Env, math: &parse::MathKind, idents: &[parse::Identifier]) -> String {
-    fn compile_dataorqi2(env: &Env, a: &parse::DataOrQi2) -> String {
+fn compile_math(mut env: &mut Env, math: &parse::MathKind, idents: &[parse::Identifier]) -> String {
+    fn compile_dataorqi2(env: &mut Env, a: &parse::DataOrQi2) -> String {
         match a {
-            parse::DataOrQi2::Qi2 => env
+            parse::DataOrQi2::Qi2 => {
+                let qi = env
                 .shu1zhi1_reference
                 .last()
                 .unwrap_or(&"f64::NAN".to_string())
-                .to_string(),
+                .to_string();
+
+                //《文言陰符》曰『言「其」者。取至近之魚而棄其餘。』
+                env.shu1zhi1_reference = vec![];
+                qi
+            },
             parse::DataOrQi2::Data(data) => compile_literal(&env, &data),
         }
     }
@@ -243,10 +249,7 @@ fn compile_math(env: &mut Env, math: &parse::MathKind, idents: &[parse::Identifi
     };
 
     let (left, right) = match (left, right) {
-        (parse::DataOrQi2::Qi2, parse::DataOrQi2::Qi2) => {
-            (compile_dataorqi2(&env, left), "f64::NAN".to_string())
-        }
-        (a, b) => (compile_dataorqi2(&env, a), compile_dataorqi2(&env, b)),
+        (a, b) => (compile_dataorqi2(&mut env, a), compile_dataorqi2(&mut env, b)),
     };
 
     env.ans_counter += 1;
