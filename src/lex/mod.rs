@@ -79,6 +79,12 @@ pub enum Lex {
     /// 噫
     Yi1Flush,
 
+    /// 除
+    Chu2,
+
+    /// 所餘幾何
+    Suo3Yu2Ji3He2,
+
     ArithBinaryOp(ArithBinaryOp),
 
     Type(Type),
@@ -379,6 +385,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
         }
 
         ans.push(match c {
+            '除' => Lex::Chu2,
             '噫' => Lex::Yi1Flush,
             '於' => Lex::Preposition(Preposition::Yu2),
             '加' => Lex::ArithBinaryOp(ArithBinaryOp::Jia1),
@@ -397,18 +404,16 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
             '「' => lex_ident_or_str_after_seeing_quote(&mut iter)?,
             '吾' => match iter.next().ok_or(Error::UnexpectedEOFAfter('吾'))? {
                 '有' => Lex::Wu2You3,
-                '嘗' => two_char_keyword(&mut iter, '嘗', '觀', Lex::Wu2Chang2Guan1)?,
+                '嘗' => get_keyword(&mut iter, &['嘗', '觀'], Lex::Wu2Chang2Guan1)?,
                 a => return Err(Error::UnexpectedCharAfter('吾', a)),
             },
-            '為' => two_char_keyword(&mut iter, '為', '是', Lex::Wei2Shi4)?,
-            '昔' => two_char_keyword(&mut iter, '昔', '之', Lex::Xi1Zhi1)?,
-            '云' => two_char_keyword(&mut iter, '云', '云', Lex::Yun2Yun2)?,
-            '恆' => match iter.next().ok_or(Error::UnexpectedEOFAfter('恆'))? {
-                '為' => two_char_keyword(&mut iter, '為', '是', Lex::Heng2Wei2Shi4)?,
-                a => return Err(Error::UnexpectedCharAfter('恆', a)),
-            },
-            '書' => two_char_keyword(&mut iter, '書', '之', Lex::Shu1Zhi1)?,
-            '名' => two_char_keyword(&mut iter, '名', '之', Lex::Ming2Zhi1)?,
+            '為' => get_keyword(&mut iter, &['為', '是'], Lex::Wei2Shi4)?,
+            '昔' => get_keyword(&mut iter, &['昔', '之'], Lex::Xi1Zhi1)?,
+            '云' => get_keyword(&mut iter, &['云', '云'], Lex::Yun2Yun2)?,
+            '恆' => get_keyword(&mut iter, &['恆', '為', '是'], Lex::Heng2Wei2Shi4)?,
+            '所' => get_keyword(&mut iter, &['所', '餘', '幾', '何'], Lex::Suo3Yu2Ji3He2)?,
+            '書' => get_keyword(&mut iter, &['書', '之'], Lex::Shu1Zhi1)?,
+            '名' => get_keyword(&mut iter, &['名', '之'], Lex::Ming2Zhi1)?,
             '以' => match iter.peek() {
                 Some('施') => {
                     iter.next();
@@ -427,11 +432,11 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
                 }
                 Some('術') => {
                     iter.next();
-                    two_char_keyword(&mut iter, '術', '也', Lex::Zhi1Shu4Ye3)?
+                    get_keyword(&mut iter, &['術', '也'], Lex::Zhi1Shu4Ye3)?
                 }
                 Some('物') => {
                     iter.next();
-                    two_char_keyword(&mut iter, '物', '也', Lex::Zhi1Wu4Ye3)?
+                    get_keyword(&mut iter, &['物', '也'], Lex::Zhi1Wu4Ye3)?
                 }
                 _ => Lex::Zhi1,
             },
@@ -442,17 +447,8 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
                 }
                 Some('不') => {
                     iter.next();
-                    match iter.next().ok_or(Error::UnexpectedEOFAfter('不'))? {
-                        '復' => match iter.next().ok_or(Error::UnexpectedEOFAfter('復'))? {
-                            '存' => {
-                                two_char_keyword(&mut iter, '存', '矣', Lex::Jin1Bu4Fu4Cun2Yi3)?
-                            }
-                            a => return Err(Error::UnexpectedCharAfter('復', a)),
-                        },
-                        a => return Err(Error::UnexpectedCharAfter('不', a)),
-                    }
+                    get_keyword(&mut iter, &['不', '復', '存', '矣'], Lex::Jin1Bu4Fu4Cun2Yi3)?
                 }
-
                 _ => Lex::Jin1,
             },
             '其' => match iter.peek() {
@@ -462,17 +458,14 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
                 }
                 Some('物') => {
                     iter.next();
-                    match iter.next().ok_or(Error::UnexpectedEOFAfter('物'))? {
-                        '如' => two_char_keyword(&mut iter, '如', '是', Lex::Qi2Wu4Ru2Shi4)?,
-                        a => return Err(Error::UnexpectedCharAfter('物', a)),
-                    }
+                    get_keyword(&mut iter, &['物', '如', '是'], Lex::Qi2Wu4Ru2Shi4)?
                 }
                 _ => Lex::Qi2,
             },
             '是' => match iter.next().ok_or(Error::UnexpectedEOFAfter('是'))? {
                 '矣' => Lex::Shi4Yi3,
                 '謂' => Lex::Shi4Wei4,
-                '術' => two_char_keyword(&mut iter, '術', '曰', Lex::Shi4Shu4Yue1)?,
+                '術' => get_keyword(&mut iter, &['術', '曰'], Lex::Shi4Shu4Yue1)?,
                 a => return Err(Error::UnexpectedCharAfter('是', a)),
             },
             '零' | '一' | '二' | '三' | '四' | '五' | '六' | '七' | '八' | '九' | '十' | '百'
@@ -481,23 +474,30 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
             '分' | '釐' | '毫' | '絲' | '忽' | '微' | '纖' | '沙' | '塵' | '埃' | '渺' | '漠' => {
                 Lex::FloatNumKeywords(FloatNumKeywords::from_char(c).expect("Cannot happen"))
             }
+
             a => panic!("unrecognized character {}", a),
         })
     }
     Ok(ans)
 }
 
-fn two_char_keyword(
-    iter: &mut peek_nth::PeekableNth<std::str::Chars>,
-    c1: char,
-    c2: char,
+/// Note: cs[0] is assumed to be already parsed
+fn get_keyword(
+    mut iter: &mut peek_nth::PeekableNth<std::str::Chars>,
+    cs: &[char],
     lex: Lex,
 ) -> Result<Lex, Error> {
-    let a = iter.next().ok_or(Error::UnexpectedEOFAfter(c1))?;
-    if a == c2 {
+    if cs.len() <= 1 {
         Ok(lex)
     } else {
-        Err(Error::UnexpectedCharAfter(c1, a))
+        let c1 = cs[0];
+        let c2 = cs[1];
+        let a = iter.next().ok_or(Error::UnexpectedEOFAfter(c1))?;
+        if a == c2 {
+            get_keyword(&mut iter, &cs[1..], lex)
+        } else {
+            Err(Error::UnexpectedCharAfter(c1, a))
+        }
     }
 }
 

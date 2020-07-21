@@ -311,8 +311,7 @@ fn parse_statement(
             // Cases where 名之 ... follows is treated as a separate NameMulti statement.
 
             return Ok(Statement::Math {
-                math: MathKind::ArithBinaryMath(*op, data1, prep, data2)
-                
+                math: MathKind::ArithBinaryMath(*op, data1, prep, data2),
             });
         }
         lex::Lex::You3 => {
