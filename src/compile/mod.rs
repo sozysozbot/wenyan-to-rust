@@ -253,7 +253,7 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind, idents: &[parse::Iden
     );
 
     env.ans_counter += 1;
-    let r = format!(
+    let mut r = format!(
         "{}let _ans{} = {} {} {};\n",
         "    ".repeat(env.indent_level),
         env.ans_counter,
@@ -264,7 +264,12 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind, idents: &[parse::Iden
     env.variables_not_yet_named
         .push(format!("_ans{}", env.ans_counter));
 
-    let mut res = r;
+    r.push_str(&compile_name_multi_statement(&mut env, &idents));
+    return r;
+}
+
+fn compile_name_multi_statement(mut env: &mut Env, idents: &[parse::Identifier]) -> String {
+    let mut res = String::new();
     for i in 0..idents.len() {
         if env.variables_not_yet_named.len() + i < idents.len() {
             // negative index is to be filled with undefined
@@ -302,11 +307,14 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind, idents: &[parse::Iden
         env.variables_not_yet_named = vec![]
     }
 
-    return res;
+    res
 }
 
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
     match st {
+        parse::Statement::Ming2Zhi1 { idents } => {
+            return compile_name_multi_statement(&mut env, &idents)
+        } 
         parse::Statement::Flush => {
             env.variables_not_yet_named = vec![];
             "".to_string()

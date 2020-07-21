@@ -38,6 +38,9 @@ pub enum Statement {
     Flush,
     // Break,
     // Comment,
+
+    /// not found in the spec, but since `名之曰「戊」` is compiled to `var WU4 = undefined;`, we need this
+    Ming2Zhi1 { idents: Vec<Identifier> } 
 }
 
 //#[derive(Debug)]
@@ -295,6 +298,10 @@ fn parse_statement(
 ) -> Result<Statement, Error> {
     let token = iter.next().ok_or(Error::UnexpectedEOF)?;
     match token {
+        lex::Lex::Ming2Zhi1 => {
+            let idents = parse_name_multi_statement_after_ming2zhi1(&mut iter)?;
+            return Ok(Statement::Ming2Zhi1{ idents })
+        }
         lex::Lex::Yi1Flush => return Ok(Statement::Flush),
         lex::Lex::ArithBinaryOp(op) => {
             let data1 = parse_data_or_qi2(&mut iter)?;
