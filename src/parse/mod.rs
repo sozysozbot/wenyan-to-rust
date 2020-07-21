@@ -47,12 +47,27 @@ pub enum Statement {
 //pub enum LogicBinaryOp {
 //}
 
+#[derive(Eq, PartialEq, Debug, Clone, Copy)]
+pub enum DivBinaryOp {
+    Div,
+    Mod
+}
+
+impl DivBinaryOp {
+   pub fn to_str(self) -> &'static str {
+        match self {
+            DivBinaryOp::Div => "/",
+            DivBinaryOp::Mod => "%",
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum MathKind {
     ArithBinaryMath(lex::ArithBinaryOp, DataOrQi2, lex::Preposition, DataOrQi2),
     // ArithUnaryMath,
     // BooleanAlgebra(Identifier, Identifier, LogicBinaryOp),
-    // ModMath
+    ModMath(DivBinaryOp, DataOrQi2, lex::Preposition, DataOrQi2)
 }
 
 #[derive(Debug)]
@@ -298,6 +313,25 @@ fn parse_statement(
 ) -> Result<Statement, Error> {
     let token = iter.next().ok_or(Error::UnexpectedEOF)?;
     match token {
+        lex::Lex::Chu2 => {
+            let data1 = parse_data_or_qi2(&mut iter)?;
+            let prep = parse_preposition(&mut iter)?;
+            let data2 = parse_data_or_qi2(&mut iter)?; // spec.html does not allow qi2 here, but the implementation seems to allow it
+
+            match iter.peek() {
+                Some(lex::Lex::Suo3Yu2Ji3He2) => {
+                    iter.next();
+                    return Ok(Statement::Math{
+                        math: MathKind::ModMath(DivBinaryOp::Mod, data1, prep, data2)
+                    })
+                }
+                _ => {
+                    return Ok(Statement::Math{
+                        math: MathKind::ModMath(DivBinaryOp::Div, data1, prep, data2)
+                    })
+                }
+            }
+        }
         lex::Lex::Ming2Zhi1 => {
             let idents = parse_name_multi_statement_after_ming2zhi1(&mut iter)?;
             return Ok(Statement::NameMulti { idents });
