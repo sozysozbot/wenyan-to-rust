@@ -1,4 +1,7 @@
 use crate::lex;
+
+type IfPlusStatements = (IfExpression, Vec<Statement>);
+
 #[derive(Debug)]
 pub enum Statement {
     Declare(DeclareStatement),
@@ -21,7 +24,11 @@ pub enum Statement {
         idents: Vec<Identifier>,
     },
     // Function,
-    If((IfExpression, Vec<Statement>), Vec<Statement>),
+    If {
+        ifcase: IfPlusStatements,
+        elseifcases: Vec<IfPlusStatements>,
+        elsecase: Vec<Statement>,
+    },
     // Return,
     Math {
         math: MathKind,
@@ -409,7 +416,11 @@ fn parse_statement(
                 Some(lex::Lex::Zhe3) => {
                     iter.next();
                     let (ifcase, elsecase) = parse_if_statement_after_zhe3(&mut iter)?;
-                    return Ok(Statement::If((IfExpression::Unary(data), ifcase), elsecase));
+                    return Ok(Statement::If {
+                        ifcase: (IfExpression::Unary(data), ifcase),
+                        elseifcases: vec![/*FIXME */],
+                        elsecase,
+                    });
                 }
                 Some(lex::Lex::IfLogicOp(op)) => {
                     iter.next();
@@ -417,10 +428,11 @@ fn parse_statement(
                     match iter.next().ok_or(Error::UnexpectedEOF)? {
                         lex::Lex::Zhe3 => {
                             let (ifcase, elsecase) = parse_if_statement_after_zhe3(&mut iter)?;
-                            return Ok(Statement::If(
-                                (IfExpression::Binary(data, *op, data2), ifcase),
+                            return Ok(Statement::If {
+                                ifcase: (IfExpression::Binary(data, *op, data2), ifcase),
+                                elseifcases: vec![/*FIXME */],
                                 elsecase,
-                            ));
+                            });
                         }
                         _ => return Err(Error::SomethingWentWrong),
                     }

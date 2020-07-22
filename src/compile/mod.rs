@@ -327,7 +327,7 @@ fn compile_ifbinary(
     op: lex::IfLogicOp,
     data2: &parse::DataOrQi2,
     ifcase: &[parse::Statement],
-    elsecase: &[parse::Statement]
+    elsecase: &[parse::Statement],
 ) -> Vec<String> {
     let mut if_inner = vec![];
 
@@ -372,11 +372,20 @@ fn compile_ifbinary(
 
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<String> {
     match st {
-        parse::Statement::If((parse::IfExpression::Unary(data), ifcase), elsecase) => {
-            unimplemented!("unary if")
-        }
-        parse::Statement::If((parse::IfExpression::Binary(data1, op, data2), ifcase), elsecase) => {
-            return compile_ifbinary(&mut env, data1, *op, data2, ifcase, elsecase)
+        parse::Statement::If {
+            ifcase: (parse::IfExpression::Unary(data), ifcase),
+            elseifcases,
+            elsecase,
+        } => unimplemented!("unary if"),
+        parse::Statement::If {
+            ifcase: (parse::IfExpression::Binary(data1, op, data2), ifcase),
+            elseifcases,
+            elsecase,
+        } => {
+            if !elseifcases.is_empty() {
+                unimplemented!("binary elseif")
+            }
+            return compile_ifbinary(&mut env, data1, *op, data2, ifcase, elsecase);
         }
         parse::Statement::Reference { data, ident: None } => {
             /* not named */

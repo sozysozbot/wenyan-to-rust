@@ -89,25 +89,38 @@ impl IdentBiMap {
         }
     }
 
-    fn insert_stmt(&mut self, st: &parse::Statement, conversion_table: &HashMap<String, String>) {
-        match st {
-            parse::Statement::If(
-                (parse::IfExpression::Binary(data1, _, data2), ifcase),
-                elsecase,
-            ) => {
+    fn insert_ifexpr(
+        &mut self,
+        ifexpr: &parse::IfExpression,
+        conversion_table: &HashMap<String, String>,
+    ) {
+        match ifexpr {
+            parse::IfExpression::Binary(data1, _, data2) => {
                 self.insert_data_or_qi2(data1, &conversion_table);
                 self.insert_data_or_qi2(data2, &conversion_table);
-                for s in ifcase {
-                    self.insert_stmt(&s, &conversion_table)
-                }
-                for s in elsecase {
-                    self.insert_stmt(&s, &conversion_table)
-                }
             }
-            parse::Statement::If((parse::IfExpression::Unary(data), ifcase), elsecase) => {
+            parse::IfExpression::Unary(data) => {
                 self.insert_data_or_qi2(data, &conversion_table);
+            }
+        }
+    }
+
+    fn insert_stmt(&mut self, st: &parse::Statement, conversion_table: &HashMap<String, String>) {
+        match st {
+            parse::Statement::If {
+                ifcase: (ifexpr, ifcase),
+                elseifcases,
+                elsecase,
+            } => {
+                self.insert_ifexpr(ifexpr, &conversion_table);
                 for s in ifcase {
                     self.insert_stmt(&s, &conversion_table)
+                }
+                for (elseifexpr, elseifcase) in elseifcases {
+                    self.insert_ifexpr(elseifexpr, &conversion_table);
+                    for s in elseifcase {
+                        self.insert_stmt(&s, &conversion_table)
+                    }
                 }
                 for s in elsecase {
                     self.insert_stmt(&s, &conversion_table)
