@@ -18,7 +18,7 @@ fn compile_optional_literal(
     match lit {
         None => match default_type {
             lex::Type::Shu4 => "0.0".to_string(),
-            lex::Type::Lie4 => unimplemented!(),
+            lex::Type::Lie4 => "vec![]".to_string(),
             lex::Type::Yan2 => "\"\"".to_string(),
             lex::Type::Yao2 => "false".to_string(),
         },
