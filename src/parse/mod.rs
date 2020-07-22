@@ -21,7 +21,7 @@ pub enum Statement {
         idents: Vec<Identifier>,
     },
     // Function,
-    If(IfExpression, IfBody),
+    If((IfExpression, Vec<Statement>), Vec<Statement>),
     // Return,
     Math {
         math: MathKind,
@@ -49,7 +49,7 @@ pub enum Statement {
 #[derive(Debug, Clone)]
 pub enum IfExpression {
     Unary(DataOrQi2),
-    Binary(DataOrQi2, lex::IfLogicOp, DataOrQi2)
+    Binary(DataOrQi2, lex::IfLogicOp, DataOrQi2),
 }
 
 //#[derive(Debug)]
@@ -361,15 +361,9 @@ fn parse_reference_statement_after_fu2(
     }
 }
 
-#[derive(Debug)]
-pub struct IfBody {
-    pub ifcase: Vec<Statement>,
-    pub elsecase: Vec<Statement>,
-}
-
 fn parse_if_statement_after_zhe3(
     mut iter: &mut peek_nth::PeekableNth<std::slice::Iter<'_, lex::Lex>>,
-) -> Result<IfBody, Error> {
+) -> Result<(Vec<Statement>, Vec<Statement>), Error> {
     // statement+ ('若非' statement+)? FOR_IF_END ;
     let mut ifcase = vec![parse_statement(&mut iter)?];
     loop {
@@ -381,7 +375,7 @@ fn parse_if_statement_after_zhe3(
                     match iter.peek() {
                         Some(lex::Lex::Yun2Yun2OrYe3) => {
                             iter.next();
-                            return Ok(IfBody { ifcase, elsecase });
+                            return Ok((ifcase, elsecase));
                         }
                         None => return Err(Error::UnexpectedEOF),
                         _ => {}
@@ -391,10 +385,7 @@ fn parse_if_statement_after_zhe3(
             }
             Some(lex::Lex::Yun2Yun2OrYe3) => {
                 iter.next();
-                return Ok(IfBody {
-                    ifcase,
-                    elsecase: vec![],
-                });
+                return Ok((ifcase, vec![]));
             }
             None => return Err(Error::UnexpectedEOF),
             _ => {}
@@ -417,16 +408,19 @@ fn parse_statement(
             match iter.peek() {
                 Some(lex::Lex::Zhe3) => {
                     iter.next();
-                    let ifbody = parse_if_statement_after_zhe3(&mut iter)?;
-                    return Ok(Statement::If(IfExpression::Unary(data), ifbody));
+                    let (ifcase, elsecase) = parse_if_statement_after_zhe3(&mut iter)?;
+                    return Ok(Statement::If((IfExpression::Unary(data), ifcase), elsecase));
                 }
                 Some(lex::Lex::IfLogicOp(op)) => {
                     iter.next();
                     let data2 = parse_data_or_qi2(&mut iter)?; // FIXME: the possibility of `(IDENTIFIER '之'('長'|STRING_LITERAL|IDENTIFIER))` is ignored
                     match iter.next().ok_or(Error::UnexpectedEOF)? {
                         lex::Lex::Zhe3 => {
-                            let ifbody = parse_if_statement_after_zhe3(&mut iter)?;
-                            return Ok(Statement::If(IfExpression::Binary(data, *op, data2), ifbody));
+                            let (ifcase, elsecase) = parse_if_statement_after_zhe3(&mut iter)?;
+                            return Ok(Statement::If(
+                                (IfExpression::Binary(data, *op, data2), ifcase),
+                                elsecase,
+                            ));
                         }
                         _ => return Err(Error::SomethingWentWrong),
                     }

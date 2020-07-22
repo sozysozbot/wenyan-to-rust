@@ -91,7 +91,10 @@ impl IdentBiMap {
 
     fn insert_stmt(&mut self, st: &parse::Statement, conversion_table: &HashMap<String, String>) {
         match st {
-            parse::Statement::If(parse::IfExpression::Binary(data1, _, data2), parse::IfBody { ifcase, elsecase }) => {
+            parse::Statement::If(
+                (parse::IfExpression::Binary(data1, _, data2), ifcase),
+                elsecase,
+            ) => {
                 self.insert_data_or_qi2(data1, &conversion_table);
                 self.insert_data_or_qi2(data2, &conversion_table);
                 for s in ifcase {
@@ -101,7 +104,7 @@ impl IdentBiMap {
                     self.insert_stmt(&s, &conversion_table)
                 }
             }
-            parse::Statement::If(parse::IfExpression::Unary(data), parse::IfBody { ifcase, elsecase }) => {
+            parse::Statement::If((parse::IfExpression::Unary(data), ifcase), elsecase) => {
                 self.insert_data_or_qi2(data, &conversion_table);
                 for s in ifcase {
                     self.insert_stmt(&s, &conversion_table)

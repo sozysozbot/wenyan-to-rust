@@ -95,7 +95,7 @@ pub enum Lex {
     Ruo4Fei1,
 
     /// 或若; not found in spec.html
-    Huo4Ruo4, 
+    Huo4Ruo4,
 
     ArithBinaryOp(ArithBinaryOp),
     LogicBinaryOp(LogicBinaryOp),
