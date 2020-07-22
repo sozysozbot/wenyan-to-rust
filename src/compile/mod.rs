@@ -321,36 +321,45 @@ fn compile_name_multi_statement(mut env: &mut Env, idents: &[parse::Identifier])
     res
 }
 
+fn compile_ifbinary(
+    mut env: &mut Env,
+    data1: &parse::DataOrQi2,
+    op: lex::IfLogicOp,
+    data2: &parse::DataOrQi2,
+    ifbody: &parse::IfBody,
+) -> Vec<String> {
+    let parse::IfBody { ifcase, elsecase } = ifbody;
+    let mut inner = vec![];
+
+    env.indent_level += 1;
+
+    if !elsecase.is_empty() {
+        unimplemented!("binary else")
+    }
+
+    for st in ifcase {
+        inner.append(&mut compile_statement(&mut env, &st));
+    }
+
+    env.indent_level -= 1;
+
+    let mut r = vec![format!(
+        "{}if {} {} {} {{\n",
+        "    ".repeat(env.indent_level),
+        compile_dataorqi2(&mut env, data1),
+        op.to_str(),
+        compile_dataorqi2(&mut env, data2),
+    )];
+    r.append(&mut inner);
+    r.push(format!("{}}}\n", "    ".repeat(env.indent_level)));
+    return r;
+}
+
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<String> {
     match st {
         parse::Statement::IfUnary(data, ifbody) => unimplemented!("unary if"),
-        parse::Statement::IfBinary(data1, op, data2, parse::IfBody { ifcase, elsecase }) => {
-            let mut inner = vec![];
-            env.rand_counter += 1;
-            let rand_n = env.rand_counter;
-
-            env.indent_level += 1;
-
-            if !elsecase.is_empty() {
-                unimplemented!("binary else")
-            }
-
-            for st in ifcase {
-                inner.append(&mut compile_statement(&mut env, &st));
-            }
-
-            env.indent_level -= 1;
-
-            let mut r = vec![format!(
-                "{}if {} {} {} {{\n",
-                "    ".repeat(env.indent_level),
-                compile_dataorqi2(&mut env, data1),
-                op.to_str(),
-                compile_dataorqi2(&mut env, data2),
-            )];
-            r.append(&mut inner);
-            r.push(format!("{}}}\n", "    ".repeat(env.indent_level)));
-            return r;
+        parse::Statement::IfBinary(data1, op, data2, ifbody) => {
+            return compile_ifbinary(&mut env, data1, *op, data2, ifbody)
         }
         parse::Statement::Reference { data, ident: None } => {
             /* not named */
