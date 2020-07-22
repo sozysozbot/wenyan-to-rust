@@ -211,18 +211,22 @@ fn compile_dataorqi2(env: &mut Env, a: &parse::DataOrQi2) -> String {
 
 fn compile_math(mut env: &mut Env, math: &parse::MathKind) -> Vec<String> {
     match math {
-        parse::MathKind::BooleanAlgebra(ident1, ident2, op) => compile_math_binary(
-            &mut env,
-            op.to_str(),
-            parse::DataOrQi2::Data(parse::Data::Identifier(ident1.clone())),
-            lex::Preposition::Yi3, /* whichever is fine */
-            parse::DataOrQi2::Data(parse::Data::Identifier(ident2.clone())),
-        ),
+        parse::MathKind::BooleanAlgebra(ident1, ident2, op) => {
+            let data1 = parse::DataOrQi2::Data(parse::Data::Identifier(ident1.clone()));
+            let data2 = parse::DataOrQi2::Data(parse::Data::Identifier(ident2.clone()));
+            compile_math_binary(
+                &mut env,
+                op.to_str(),
+                &data1,
+                lex::Preposition::Yi3, /* whichever is fine */
+                &data2,
+            )
+        }
         parse::MathKind::ArithBinaryMath(op, data1, prep, data2) => {
-            compile_math_binary(&mut env, op.to_str(), data1.clone(), *prep, data2.clone())
+            compile_math_binary(&mut env, op.to_str(), &data1, *prep, &data2)
         }
         parse::MathKind::ModMath(op, data1, prep, data2) => {
-            compile_math_binary(&mut env, op.to_str(), data1.clone(), *prep, data2.clone())
+            compile_math_binary(&mut env, op.to_str(), &data1, *prep, &data2)
         }
         parse::MathKind::ArithUnaryMath(data) => {
             let a = compile_dataorqi2(&mut env, data);
@@ -244,9 +248,9 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind) -> Vec<String> {
 fn compile_math_binary(
     mut env: &mut Env,
     opstr: &str,
-    data1: parse::DataOrQi2,
+    data1: &parse::DataOrQi2,
     prep: lex::Preposition,
-    data2: parse::DataOrQi2,
+    data2: &parse::DataOrQi2,
 ) -> Vec<String> {
     let left = compile_dataorqi2(
         &mut env,
