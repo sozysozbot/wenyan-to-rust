@@ -321,6 +321,25 @@ fn compile_name_multi_statement(mut env: &mut Env, idents: &[parse::Identifier])
     res
 }
 
+fn compile_ifcond(mut env: &mut Env, ifcond: &parse::IfExpression, keyword: &str) -> String {
+    match ifcond {
+        parse::IfExpression::Binary(data1, op, data2) => format!(
+            "{}{} {} {} {} {{\n",
+            "    ".repeat(env.indent_level),
+            keyword,
+            compile_dataorqi2(&mut env, data1),
+            op.to_str(),
+            compile_dataorqi2(&mut env, data2),
+        ),
+        parse::IfExpression::Unary(data1) => format!(
+            "{}{} {} {{\n",
+            "    ".repeat(env.indent_level),
+            keyword,
+            compile_dataorqi2(&mut env, data1),
+        ),
+    }
+}
+
 fn compile_if(
     mut env: &mut Env,
     ifcase: &parse::CondPlusStatements,
@@ -328,49 +347,33 @@ fn compile_if(
     elsecase: &[parse::Statement],
 ) -> Vec<String> {
     let (ifcond, ifstmts) = ifcase;
-    if !elseifcases.is_empty() {
-        unimplemented!("binary elseif")
-    }
-    let mut if_inner = vec![];
+    let mut r = vec![compile_ifcond(&mut env, ifcond, "if")];
 
     env.indent_level += 1;
     for st in ifstmts {
-        if_inner.append(&mut compile_statement(&mut env, &st));
+        r.append(&mut compile_statement(&mut env, &st));
     }
     env.indent_level -= 1;
-    let mut r = vec![match ifcond {
-        parse::IfExpression::Binary(data1, op, data2) => format!(
-            "{}if {} {} {} {{\n",
-            "    ".repeat(env.indent_level),
-            compile_dataorqi2(&mut env, data1),
-            op.to_str(),
-            compile_dataorqi2(&mut env, data2),
-        ),
-        parse::IfExpression::Unary(data1) => format!(
-            "{}if {} {{\n",
-            "    ".repeat(env.indent_level),
-            compile_dataorqi2(&mut env, data1),
-        ),
-    }];
 
-    if elsecase.is_empty() {
-        r.append(&mut if_inner);
-        r.push(format!("{}}}\n", "    ".repeat(env.indent_level)));
-        return r;
-    } else {
-        let mut else_inner = vec![];
+    for (elseifcond, elseifstmts) in elseifcases {
+        r.push(compile_ifcond(&mut env, elseifcond, "} else if"));
         env.indent_level += 1;
-        for st in elsecase {
-            else_inner.append(&mut compile_statement(&mut env, &st));
+        for st in elseifstmts {
+            r.append(&mut compile_statement(&mut env, &st));
         }
         env.indent_level -= 1;
-
-        r.append(&mut if_inner);
-        r.push(format!("{}}} else {{\n", "    ".repeat(env.indent_level)));
-        r.append(&mut else_inner);
-        r.push(format!("{}}}\n", "    ".repeat(env.indent_level)));
-        return r;
     }
+
+    if !elsecase.is_empty() {
+        r.push(format!("{}}} else {{\n", "    ".repeat(env.indent_level)));
+        env.indent_level += 1;
+        for st in elsecase {
+            r.append(&mut compile_statement(&mut env, &st));
+        }
+        env.indent_level -= 1;
+    }
+    r.push(format!("{}}}\n", "    ".repeat(env.indent_level)));
+    return r;
 }
 
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<String> {
