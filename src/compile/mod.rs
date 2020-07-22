@@ -163,6 +163,23 @@ fn compile_forenum(env: &Env, num: i64, statements: &[parse::Statement]) -> Stri
     );
 }
 
+fn compile_dataorqi2(env: &mut Env, a: &parse::DataOrQi2) -> String {
+    match a {
+        parse::DataOrQi2::Qi2 => {
+            let qi = env
+                .variables_not_yet_named
+                .last()
+                .unwrap_or(&"f64::NAN".to_string())
+                .to_string();
+
+            //《文言陰符》曰『言「其」者。取至近之魚而棄其餘。』
+            env.variables_not_yet_named = vec![];
+            qi
+        }
+        parse::DataOrQi2::Data(data) => compile_literal(&env, &data),
+    }
+}
+
 /// 吾有三數。曰三曰五曰二名之曰「甲」。加其以五。
 /// is to be translated as
 /// ```
@@ -192,23 +209,6 @@ fn compile_forenum(env: &Env, num: i64, statements: &[parse::Statement]) -> Stri
 /// ```
 
 fn compile_math(mut env: &mut Env, math: &parse::MathKind) -> String {
-    fn compile_dataorqi2(env: &mut Env, a: &parse::DataOrQi2) -> String {
-        match a {
-            parse::DataOrQi2::Qi2 => {
-                let qi = env
-                    .variables_not_yet_named
-                    .last()
-                    .unwrap_or(&"f64::NAN".to_string())
-                    .to_string();
-
-                //《文言陰符》曰『言「其」者。取至近之魚而棄其餘。』
-                env.variables_not_yet_named = vec![];
-                qi
-            }
-            parse::DataOrQi2::Data(data) => compile_literal(&env, &data),
-        }
-    }
-
     let (opstr, data1, prep, data2) = match math {
         parse::MathKind::BooleanAlgebra(ident1, ident2, op) => (
             op.to_str(),
@@ -322,6 +322,35 @@ fn compile_name_multi_statement(mut env: &mut Env, idents: &[parse::Identifier])
 
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
     match st {
+        parse::Statement::IfUnary(data, ifbody) => unimplemented!("unary if"),
+        parse::Statement::IfBinary(data1, op, data2, parse::IfBody{ifcase, elsecase}) => {
+            let mut inner = String::new();
+    env.rand_counter += 1;
+    let rand_n = env.rand_counter;
+
+    env.indent_level += 1;
+
+    if !elsecase.is_empty() {
+        unimplemented!("binary else")
+    }
+
+    for st in ifcase {
+        inner.push_str(&compile_statement(&mut env, &st));
+    }
+
+    env.indent_level -= 1;
+
+            let r = format!(
+                "{}if {} {} {} {{\n{}{}}}\n",
+                "    ".repeat(env.indent_level),
+                compile_dataorqi2(&mut env, data1),
+                op.to_str(),
+                compile_dataorqi2(&mut env, data2),
+                inner,
+                "    ".repeat(env.indent_level),
+            );
+            return r;
+        }
         parse::Statement::Reference { data, ident: None } => {
             /* not named */
             env.ans_counter += 1;
@@ -408,7 +437,7 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
                 "{}{} = {};\n",
                 "    ".repeat(env.indent_level),
                 env.ident_map.translate_from_hanzi(&ident),
-                compile_literal(&env, data)
+                compile_dataorqi2(&mut env, data)
             )
         }
         parse::Statement::InitDefine { type_, data, name } => {
@@ -460,26 +489,21 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
 }
 
 fn compile_forenum_ident(
-    env: &mut Env,
+    mut env: &mut Env,
     ident: &parse::Identifier,
     statements: &[parse::Statement],
 ) -> String {
     let mut inner = String::new();
     env.rand_counter += 1;
     let rand_n = env.rand_counter;
-    let mut new_env = Env {
-        indent_level: env.indent_level + 1,
-        ans_counter: env.ans_counter,
-        rand_counter: env.rand_counter,
-        ident_map: env.ident_map.clone(),
 
-        // variables_not_yet_named must be inherited
-        variables_not_yet_named: env.variables_not_yet_named.clone(),
-    };
+    env.indent_level += 1;
+
     for st in statements {
-        inner.push_str(&compile_statement(&mut new_env, &st));
+        inner.push_str(&compile_statement(&mut env, &st));
     }
 
+    env.indent_level -= 1;
     return format!(
         "{}let mut _rand{} = 0.0;\n{}while _rand{} < {} {{\n{}{}_rand{} += 1.0;\n{}}}\n",
         "    ".repeat(env.indent_level),

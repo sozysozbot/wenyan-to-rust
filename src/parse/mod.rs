@@ -21,14 +21,15 @@ pub enum Statement {
         idents: Vec<Identifier>,
     },
     // Function,
-    // If,
+    IfUnary(DataOrQi2, IfBody),
+    IfBinary(DataOrQi2, lex::IfLogicOp, DataOrQi2, IfBody),
     // Return,
     Math {
         math: MathKind,
     },
     Assign {
         ident: Identifier,
-        data: Data,
+        data: DataOrQi2,
     },
     // Import,
     // Object,
@@ -247,7 +248,7 @@ fn parse_for_enum_statement_after_wei2shi4(
             lex::Lex::Bian4 => {
                 let mut inner = vec![];
                 loop {
-                    if iter.peek() == Some(&&lex::Lex::Yun2Yun2) {
+                    if iter.peek() == Some(&&lex::Lex::Yun2Yun2OrYe3) {
                         iter.next();
                         break;
                     }
@@ -265,7 +266,7 @@ fn parse_for_enum_statement_after_wei2shi4(
             lex::Lex::Bian4 => {
                 let mut inner = vec![];
                 loop {
-                    if iter.peek() == Some(&&lex::Lex::Yun2Yun2) {
+                    if iter.peek() == Some(&&lex::Lex::Yun2Yun2OrYe3) {
                         iter.next();
                         break;
                     }
@@ -308,20 +309,16 @@ fn parse_assign_after_xi1zhi1(
             lex::Lex::Zhe3 => match iter.next().ok_or(Error::UnexpectedEOF)? {
                 lex::Lex::Jin1Bu4Fu4Cun2Yi3 => unimplemented!("昔之 ... 者今不復存矣"),
                 lex::Lex::Jin1 => {
-                    if let lex::Lex::Qi2 = iter.peek().ok_or(Error::UnexpectedEOF)? {
-                        unimplemented!("昔之 ... 者今其是矣")
-                    } else {
-                        let data = parse_data(&mut iter)?;
-                        match iter.next().ok_or(Error::UnexpectedEOF)? {
-                            lex::Lex::Zhi1 => unimplemented!("昔之 ... 者今data之INT_NUM是矣"),
-                            lex::Lex::Shi4Yi3 => {
-                                return Ok(Statement::Assign {
-                                    ident: Identifier(ident.clone()),
-                                    data,
-                                })
-                            }
-                            _ => return Err(Error::SomethingWentWrong),
+                    let data = parse_data_or_qi2(&mut iter)?;
+                    match iter.next().ok_or(Error::UnexpectedEOF)? {
+                        lex::Lex::Zhi1 => unimplemented!("昔之 ... 者今data之INT_NUM是矣"),
+                        lex::Lex::Shi4Yi3 => {
+                            return Ok(Statement::Assign {
+                                ident: Identifier(ident.clone()),
+                                data,
+                            })
                         }
+                        _ => return Err(Error::SomethingWentWrong),
                     }
                 }
                 _ => return Err(Error::SomethingWentWrong),
@@ -359,11 +356,79 @@ fn parse_reference_statement_after_fu2(
     }
 }
 
+#[derive(Debug)]
+pub struct IfBody {
+    pub ifcase: Vec<Statement>,
+    pub elsecase: Vec<Statement>,
+}
+
+fn parse_if_statement_after_zhe3(
+    mut iter: &mut peek_nth::PeekableNth<std::slice::Iter<'_, lex::Lex>>,
+) -> Result<IfBody, Error> {
+    // statement+ ('若非' statement+)? FOR_IF_END ;
+    let mut ifcase = vec![parse_statement(&mut iter)?];
+    loop {
+        match iter.peek() {
+            Some(lex::Lex::Ruo4Fei1) => {
+                iter.next();
+                let mut elsecase = vec![parse_statement(&mut iter)?];
+                loop {
+                    match iter.peek() {
+                        Some(lex::Lex::Yun2Yun2OrYe3) => {
+                            iter.next();
+                            return Ok(IfBody { ifcase, elsecase });
+                        }
+                        None => return Err(Error::UnexpectedEOF),
+                        _ => {}
+                    }
+                    elsecase.push(parse_statement(&mut iter)?)
+                }
+            }
+            Some(lex::Lex::Yun2Yun2OrYe3) => {
+                iter.next();
+                return Ok(IfBody {
+                    ifcase,
+                    elsecase: vec![],
+                });
+            }
+            None => return Err(Error::UnexpectedEOF),
+            _ => {}
+        }
+        ifcase.push(parse_statement(&mut iter)?);
+    }
+}
+
 fn parse_statement(
     mut iter: &mut peek_nth::PeekableNth<std::slice::Iter<'_, lex::Lex>>,
 ) -> Result<Statement, Error> {
     let token = iter.next().ok_or(Error::UnexpectedEOF)?;
     match token {
+        lex::Lex::Ruo4 => {
+            // if_statement                : '若' if_expression '者' statement+ ('若非' statement+)? FOR_IF_END ;
+            // if_expression               : unary_if_expression|binary_if_expression ;
+            // unary_if_expression         : data|(IDENTIFIER '之'('長'|STRING_LITERAL|IDENTIFIER))|'其' ;
+            // binary_if_expression        : unary_if_expression IF_LOGIC_OP unary_if_expression ;
+            let data = parse_data_or_qi2(&mut iter)?; // FIXME: the possibility of `(IDENTIFIER '之'('長'|STRING_LITERAL|IDENTIFIER))` is ignored
+            match iter.peek() {
+                Some(lex::Lex::Zhe3) => {
+                    iter.next();
+                    let ifbody = parse_if_statement_after_zhe3(&mut iter)?;
+                    return Ok(Statement::IfUnary(data, ifbody));
+                }
+                Some(lex::Lex::IfLogicOp(op)) => {
+                    iter.next();
+                    let data2 = parse_data_or_qi2(&mut iter)?; // FIXME: the possibility of `(IDENTIFIER '之'('長'|STRING_LITERAL|IDENTIFIER))` is ignored
+                    match iter.next().ok_or(Error::UnexpectedEOF)? {
+                        lex::Lex::Zhe3 => {
+                            let ifbody = parse_if_statement_after_zhe3(&mut iter)?;
+                            return Ok(Statement::IfBinary(data, *op, data2, ifbody));
+                        }
+                        _ => return Err(Error::SomethingWentWrong),
+                    }
+                }
+                _ => return Err(Error::SomethingWentWrong),
+            }
+        }
         lex::Lex::Fu2 => {
             // two candidates:
             // boolean_algebra_statement   : '夫' IDENTIFIER IDENTIFIER LOGIC_BINARY_OP ;

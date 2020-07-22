@@ -79,8 +79,37 @@ impl IdentBiMap {
         }
     }
 
+    fn insert_data_or_qi2(
+        &mut self,
+        dat: &parse::DataOrQi2,
+        conversion_table: &HashMap<String, String>,
+    ) {
+        if let parse::DataOrQi2::Data(d1) = dat {
+            self.insert_dat(d1, &conversion_table);
+        }
+    }
+
     fn insert_stmt(&mut self, st: &parse::Statement, conversion_table: &HashMap<String, String>) {
         match st {
+            parse::Statement::IfBinary(data1, _, data2, parse::IfBody { ifcase, elsecase }) => {
+                self.insert_data_or_qi2(data1, &conversion_table);
+                self.insert_data_or_qi2(data2, &conversion_table);
+                for s in ifcase {
+                    self.insert_stmt(&s, &conversion_table)
+                }
+                for s in elsecase {
+                    self.insert_stmt(&s, &conversion_table)
+                }
+            }
+            parse::Statement::IfUnary(data, parse::IfBody { ifcase, elsecase }) => {
+                self.insert_data_or_qi2(data, &conversion_table);
+                for s in ifcase {
+                    self.insert_stmt(&s, &conversion_table)
+                }
+                for s in elsecase {
+                    self.insert_stmt(&s, &conversion_table)
+                }
+            }
             parse::Statement::Reference { data, ident } => {
                 self.insert_dat(data, &conversion_table);
                 if let Some(i) = ident {
@@ -98,12 +127,8 @@ impl IdentBiMap {
             | parse::Statement::Math {
                 math: parse::MathKind::ModMath(_, data1, _, data2),
             } => {
-                if let parse::DataOrQi2::Data(d1) = data1 {
-                    self.insert_dat(d1, &conversion_table);
-                }
-                if let parse::DataOrQi2::Data(d2) = data2 {
-                    self.insert_dat(d2, &conversion_table);
-                }
+                self.insert_data_or_qi2(data1, &conversion_table);
+                self.insert_data_or_qi2(data2, &conversion_table);
             }
             parse::Statement::Math {
                 math: parse::MathKind::BooleanAlgebra(ident1, ident2, _),
@@ -114,7 +139,7 @@ impl IdentBiMap {
             parse::Statement::Assign { ident, data } => {
                 self.insert_ident(ident.clone(), &conversion_table);
                 self.mutable_idents.insert(ident.clone());
-                self.insert_dat(data, &conversion_table);
+                self.insert_data_or_qi2(data, &conversion_table);
             }
             parse::Statement::Print | parse::Statement::Flush => {}
             parse::Statement::ForEnum { statements, num: _ } => {

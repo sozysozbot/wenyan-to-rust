@@ -24,8 +24,8 @@ pub enum Lex {
     /// 恆為是
     Heng2Wei2Shi4,
 
-    /// 云云
-    Yun2Yun2,
+    /// 云云, 也
+    Yun2Yun2OrYe3,
 
     /// 有
     You3,
@@ -88,8 +88,15 @@ pub enum Lex {
     /// 夫
     Fu2,
 
+    /// 若
+    Ruo4,
+
+    /// 若非
+    Ruo4Fei1,
+
     ArithBinaryOp(ArithBinaryOp),
     LogicBinaryOp(LogicBinaryOp),
+    IfLogicOp(IfLogicOp),
 
     Type(Type),
     StringLiteral(String),
@@ -336,6 +343,35 @@ pub enum Type {
     Yao2,
 }
 
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+pub enum IfLogicOp {
+    /// 等於
+    Deng3Yu2,
+    /// 不等於
+    Bu4Deng3Yu2,
+    /// 不大於
+    Bu4Da4Yu2,
+    /// 不小於
+    Bu4Xiao3Yu2,
+    /// 大於
+    Da4Yu2,
+    /// 小於
+    Xiao3Yu2,
+}
+
+impl IfLogicOp {
+    pub fn to_str(self) -> &'static str {
+        match self {
+            IfLogicOp::Deng3Yu2 => "==",
+            IfLogicOp::Bu4Deng3Yu2 => "!=",
+            IfLogicOp::Bu4Da4Yu2 => "<=",
+            IfLogicOp::Bu4Xiao3Yu2 => ">=",
+            IfLogicOp::Da4Yu2 => ">",
+            IfLogicOp::Xiao3Yu2 => "<",
+        }
+    }
+}
+
 use peek_nth::IteratorExt;
 
 #[derive(Debug, Clone)]
@@ -405,6 +441,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
         }
 
         ans.push(match c {
+            '也' => Lex::Yun2Yun2OrYe3,
             '夫' => Lex::Fu2,
             '除' => Lex::Chu2,
             '噫' => Lex::Yi1Flush,
@@ -443,17 +480,53 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
             },
             '為' => get_keyword(&mut iter, &['為', '是'], Lex::Wei2Shi4)?,
             '昔' => get_keyword(&mut iter, &['昔', '之'], Lex::Xi1Zhi1)?,
-            '云' => get_keyword(&mut iter, &['云', '云'], Lex::Yun2Yun2)?,
+            '云' => get_keyword(&mut iter, &['云', '云'], Lex::Yun2Yun2OrYe3)?,
             '恆' => get_keyword(&mut iter, &['恆', '為', '是'], Lex::Heng2Wei2Shi4)?,
             '所' => get_keyword(&mut iter, &['所', '餘', '幾', '何'], Lex::Suo3Yu2Ji3He2)?,
             '書' => get_keyword(&mut iter, &['書', '之'], Lex::Shu1Zhi1)?,
             '名' => get_keyword(&mut iter, &['名', '之'], Lex::Ming2Zhi1)?,
+            '等' => get_keyword(
+                &mut iter,
+                &['等', '於'],
+                Lex::IfLogicOp(IfLogicOp::Deng3Yu2),
+            )?,
+            '大' => get_keyword(&mut iter, &['大', '於'], Lex::IfLogicOp(IfLogicOp::Da4Yu2))?,
+            '小' => get_keyword(
+                &mut iter,
+                &['小', '於'],
+                Lex::IfLogicOp(IfLogicOp::Xiao3Yu2),
+            )?,
+            '不' => match iter.next().ok_or(Error::UnexpectedEOFAfter('不'))? {
+                '等' => get_keyword(
+                    &mut iter,
+                    &['等', '於'],
+                    Lex::IfLogicOp(IfLogicOp::Bu4Deng3Yu2),
+                )?,
+                '大' => get_keyword(
+                    &mut iter,
+                    &['大', '於'],
+                    Lex::IfLogicOp(IfLogicOp::Bu4Da4Yu2),
+                )?,
+                '小' => get_keyword(
+                    &mut iter,
+                    &['小', '於'],
+                    Lex::IfLogicOp(IfLogicOp::Bu4Xiao3Yu2),
+                )?,
+                a => return Err(Error::UnexpectedCharAfter('不', a)),
+            },
             '以' => match iter.peek() {
                 Some('施') => {
                     iter.next();
                     Lex::Yi3Shi1
                 }
                 _ => Lex::Preposition(Preposition::Yi3),
+            },
+            '若' => match iter.peek() {
+                Some('非') => {
+                    iter.next();
+                    Lex::Ruo4Fei1
+                }
+                _ => Lex::Ruo4,
             },
             '之' => match iter.peek() {
                 Some('書') => {
