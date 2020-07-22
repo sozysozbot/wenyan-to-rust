@@ -57,6 +57,7 @@ pub enum Statement {
 pub enum IfCond {
     Unary(DataOrQi2),
     Binary(DataOrQi2, lex::IfLogicOp, DataOrQi2),
+    NotQi2,
 }
 
 //#[derive(Debug)]
@@ -458,10 +459,18 @@ fn parse_ifexpression_plus_zhe3(mut iter: &mut LexIter<'_>) -> Result<IfCond, Er
 fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
     let token = iter.next().ok_or(Error::UnexpectedEOF)?;
     match token {
-        lex::Lex::Ruo4Qi2Ran2Zhe3 => {
-            let (ifcase, elseifcases, elsecase) = parse_if_statement_after_zhe3(&mut iter)?;
+        lex::Lex::Ruo4Qi2Bu4Ran2Zhe3 => {
+            let (ifstmts, elseifcases, elsecase) = parse_if_statement_after_zhe3(&mut iter)?;
             return Ok(Statement::If {
-                ifcase: (IfCond::Unary(DataOrQi2::Qi2), ifcase),
+                ifcase: (IfCond::NotQi2, ifstmts),
+                elseifcases,
+                elsecase,
+            });
+        }
+        lex::Lex::Ruo4Qi2Ran2Zhe3 => {
+            let (ifstmts, elseifcases, elsecase) = parse_if_statement_after_zhe3(&mut iter)?;
+            return Ok(Statement::If {
+                ifcase: (IfCond::Unary(DataOrQi2::Qi2), ifstmts),
                 elseifcases,
                 elsecase,
             });
@@ -469,9 +478,9 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
         lex::Lex::Ruo4 => {
             // if_statement                : '若' if_expression '者' statement+ ('或若' if_expression '者' statement+)* ('若非' statement+)? FOR_IF_END ;
             let ifexpr = parse_ifexpression_plus_zhe3(&mut iter)?;
-            let (ifcase, elseifcases, elsecase) = parse_if_statement_after_zhe3(&mut iter)?;
+            let (ifstmts, elseifcases, elsecase) = parse_if_statement_after_zhe3(&mut iter)?;
             return Ok(Statement::If {
-                ifcase: (ifexpr, ifcase),
+                ifcase: (ifexpr, ifstmts),
                 elseifcases,
                 elsecase,
             });

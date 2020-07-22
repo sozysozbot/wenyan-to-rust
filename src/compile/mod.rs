@@ -364,6 +364,12 @@ fn compile_ifcond(mut env: &mut Env, ifcond: &parse::IfCond, keyword: &str) -> S
             keyword,
             compile_dataorqi2(&mut env, data1),
         ),
+        parse::IfCond::NotQi2 => format!(
+            "{}{} !{} {{\n",
+            "    ".repeat(env.indent_level),
+            keyword,
+            compile_dataorqi2(&mut env, &parse::DataOrQi2::Qi2),
+        )
     }
 }
 

@@ -102,6 +102,7 @@ impl IdentBiMap {
             parse::IfCond::Unary(data) => {
                 self.insert_data_or_qi2(data, &conversion_table);
             }
+            parse::IfCond::NotQi2 => {}
         }
     }
 

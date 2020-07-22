@@ -103,6 +103,9 @@ pub enum Lex {
     /// 若其然者; not found in spec.html
     Ruo4Qi2Ran2Zhe3,
 
+    /// 若其不然者; not found in spec.html
+    Ruo4Qi2Bu4Ran2Zhe3,
+
     ArithBinaryOp(ArithBinaryOp),
     LogicBinaryOp(LogicBinaryOp),
     IfLogicOp(IfLogicOp),
@@ -539,6 +542,17 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
                             iter.next();
                             iter.next();
                             get_keyword(&mut iter, &['然', '者'], Lex::Ruo4Qi2Ran2Zhe3)?
+                        }
+                        Some('不') => { // Note that 若 + 其 + 不等於 is a possibility
+                            match iter.peek_nth(2) {
+                                Some('然') => {
+                                    iter.next();
+                                    iter.next();
+                                    iter.next();
+                                    get_keyword(&mut iter, &['然', '者'], Lex::Ruo4Qi2Bu4Ran2Zhe3)?
+                                }
+                                _ => Lex::Ruo4,
+                            }
                         }
                         _ => Lex::Ruo4,
                     }
