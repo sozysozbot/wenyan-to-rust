@@ -437,10 +437,12 @@ fn parse_if_statement_after_zhe3(
     }
 }
 
+/// ```
+/// if_expression               : unary_if_expression|binary_if_expression ;
+/// unary_if_expression         : data|(IDENTIFIER '之'('長'|STRING_LITERAL|IDENTIFIER))|'其' ;
+/// binary_if_expression        : unary_if_expression IF_LOGIC_OP unary_if_expression ;
+/// ```
 fn parse_ifexpression_plus_zhe3(mut iter: &mut LexIter<'_>) -> Result<IfCond, Error> {
-    // if_expression               : unary_if_expression|binary_if_expression ;
-    // unary_if_expression         : data|(IDENTIFIER '之'('長'|STRING_LITERAL|IDENTIFIER))|'其' ;
-    // binary_if_expression        : unary_if_expression IF_LOGIC_OP unary_if_expression ;
     let data = parse_data_or_qi2(&mut iter)?; // FIXME: the possibility of `(IDENTIFIER '之'('長'|STRING_LITERAL|IDENTIFIER))` is ignored
     match iter.peek() {
         Some(lex::Lex::Zhe3) => {
@@ -460,8 +462,7 @@ fn parse_ifexpression_plus_zhe3(mut iter: &mut LexIter<'_>) -> Result<IfCond, Er
 }
 
 fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
-    let token = iter.next().ok_or(Error::UnexpectedEOF)?;
-    match token {
+    match iter.next().ok_or(Error::UnexpectedEOF)? {
         lex::Lex::Chong1 => {
             // array_push_statement        : '充' (IDENTIFIER|'其') (PREPOSITION_RIGHT data)+ name_single_statement?;
             let what_to_fill = parse_data_or_qi2(&mut iter)?;
@@ -469,12 +470,10 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
                 iter.next().ok_or(Error::UnexpectedEOF)?
             {
                 let mut elems = vec![parse_data(&mut iter)?];
-
                 while let Some(lex::Lex::Preposition(lex::Preposition::Yi3)) = iter.peek() {
                     iter.next();
                     elems.push(parse_data(&mut iter)?);
                 }
-
                 match iter.peek() {
                     Some(lex::Lex::Ming2Zhi1) => unimplemented!("ming2zhi1 after array"), // remaining: name_single_statement?
                     _ => Ok(Statement::ArrayFill {
@@ -512,39 +511,11 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
                 elsecase,
             })
         }
-        lex::Lex::Fu2 => {
-            // two candidates:
-            // boolean_algebra_statement   : '夫' IDENTIFIER IDENTIFIER LOGIC_BINARY_OP ;
-            // reference_statement         : '夫' data ('之' (STRING_LITERAL|INT_NUM|'其餘'|IDENTIFIER|'長'))? name_single_statement? ;
-
-            match iter.peek() {
-                Some(lex::Lex::Identifier(ident)) => match iter.peek_nth(1) {
-                    Some(lex::Lex::Identifier(ident2)) => match iter.peek_nth(2) {
-                        Some(lex::Lex::LogicBinaryOp(op)) => {
-                            iter.next(); // first ident
-                            iter.next(); // second ident
-                            iter.next(); // operator
-                            Ok(Statement::Math {
-                                math: MathKind::BooleanAlgebra(
-                                    Identifier(ident.to_string()),
-                                    Identifier(ident2.to_string()),
-                                    *op,
-                                ),
-                            })
-                        }
-                        _ => parse_reference_statement_after_fu2(&mut iter),
-                    },
-                    _ => parse_reference_statement_after_fu2(&mut iter),
-                },
-                None => Err(Error::UnexpectedEOF),
-                Some(_) => parse_reference_statement_after_fu2(&mut iter),
-            }
-        }
+        lex::Lex::Fu2 => parse_after_fu2(&mut iter),
         lex::Lex::Chu2 => {
             let data1 = parse_data_or_qi2(&mut iter)?;
             let prep = parse_preposition(&mut iter)?;
             let data2 = parse_data_or_qi2(&mut iter)?; // spec.html does not allow qi2 here, but the implementation seems to allow it
-
             match iter.peek() {
                 Some(lex::Lex::Suo3Yu2Ji3He2) => {
                     iter.next();
@@ -566,19 +537,14 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
             let data1 = parse_data_or_qi2(&mut iter)?;
             let prep = parse_preposition(&mut iter)?;
             let data2 = parse_data_or_qi2(&mut iter)?;
-
             // Cases where 名之 ... follows is treated as a separate NameMulti statement.
-
             Ok(Statement::Math {
                 math: MathKind::ArithBinaryMath(*op, data1, prep, data2),
             })
         }
-        lex::Lex::Bian4Change => {
-            let data = parse_data_or_qi2(&mut iter)?;
-            Ok(Statement::Math {
-                math: MathKind::ArithUnaryMath(data),
-            })
-        }
+        lex::Lex::Bian4Change => Ok(Statement::Math {
+            math: MathKind::ArithUnaryMath(parse_data_or_qi2(&mut iter)?),
+        }),
         lex::Lex::You3 => parse_init_define_statement_after_you3(&mut iter),
         lex::Lex::Heng2Wei2Shi4 => {
             let mut statements = vec![];
@@ -595,57 +561,87 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
         lex::Lex::Wei2Shi4 => parse_for_enum_statement_after_wei2shi4(&mut iter),
         lex::Lex::Shu1Zhi1 => Ok(Statement::Print),
         lex::Lex::Xi1Zhi1 => parse_assign_after_xi1zhi1(&mut iter),
-        lex::Lex::Wu2You3 => {
-            let next = iter.next().ok_or(Error::UnexpectedEOF)?;
-            match next {
-                lex::Lex::IntNum(num) => {
-                    match iter.next().ok_or(Error::UnexpectedEOF)? {
-                        lex::Lex::Type(t) => {
-                            use std::convert::TryFrom;
+        lex::Lex::Wu2You3 => parse_after_wu2you3(&mut iter),
+        a => unimplemented!("Parser encountered {:?}", a),
+    }
+}
 
-                            let mut ans = vec![];
-                            let vec = loop {
-                                if iter.peek() != Some(&&lex::Lex::Yue1) {
-                                    break ans;
-                                }
-                                iter.next();
-                                let data = parse_data(&mut iter)?;
-                                ans.push(data);
-                            };
+/// two candidates:
+/// `boolean_algebra_statement   : '夫' IDENTIFIER IDENTIFIER LOGIC_BINARY_OP ;`
+/// `reference_statement         : '夫' data ('之' (STRING_LITERAL|INT_NUM|'其餘'|IDENTIFIER|'長'))? name_single_statement? ;`
+fn parse_after_fu2(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
+    match iter.peek() {
+        Some(lex::Lex::Identifier(ident)) => match iter.peek_nth(1) {
+            Some(lex::Lex::Identifier(ident2)) => match iter.peek_nth(2) {
+                Some(lex::Lex::LogicBinaryOp(op)) => {
+                    iter.next(); // first ident
+                    iter.next(); // second ident
+                    iter.next(); // operator
+                    Ok(Statement::Math {
+                        math: MathKind::BooleanAlgebra(
+                            Identifier(ident.to_string()),
+                            Identifier(ident2.to_string()),
+                            *op,
+                        ),
+                    })
+                }
+                _ => parse_reference_statement_after_fu2(&mut iter),
+            },
+            _ => parse_reference_statement_after_fu2(&mut iter),
+        },
+        None => Err(Error::UnexpectedEOF),
+        Some(_) => parse_reference_statement_after_fu2(&mut iter),
+    }
+}
 
-                            let variable_count = match usize::try_from(interpret_intnum(num)) {
-                                Err(_) => return Err(Error::InvalidVariableCount),
-                                Ok(a) => a,
-                            };
+fn parse_after_wu2you3(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
+    let next = iter.next().ok_or(Error::UnexpectedEOF)?;
+    match next {
+        lex::Lex::IntNum(num) => {
+            match iter.next().ok_or(Error::UnexpectedEOF)? {
+                lex::Lex::Type(t) => {
+                    use std::convert::TryFrom;
 
-                            if variable_count == 0 {
-                                return Err(Error::InvalidVariableCount);
-                            }
-
-                            let declare = DeclareStatement {
-                                how_many_variables: variable_count as usize,
-                                type_: *t,
-                                data_arr: vec,
-                            };
-
-                            if let Some(lex::Lex::Ming2Zhi1) = iter.peek() {
-                                iter.next();
-                                let idents = parse_name_multi_statement_after_ming2zhi1(&mut iter)?;
-                                Ok(Statement::Define {
-                                    decl: declare,
-                                    idents,
-                                })
-                            } else {
-                                Ok(Statement::Declare(declare))
-                            }
+                    let mut ans = vec![];
+                    let vec = loop {
+                        if iter.peek() != Some(&&lex::Lex::Yue1) {
+                            break ans;
                         }
-                        _ => unimplemented!(), // 術, 物
+                        iter.next();
+                        let data = parse_data(&mut iter)?;
+                        ans.push(data);
+                    };
+
+                    let variable_count = match usize::try_from(interpret_intnum(num)) {
+                        Err(_) => return Err(Error::InvalidVariableCount),
+                        Ok(a) => a,
+                    };
+
+                    if variable_count == 0 {
+                        return Err(Error::InvalidVariableCount);
+                    }
+
+                    let declare = DeclareStatement {
+                        how_many_variables: variable_count as usize,
+                        type_: *t,
+                        data_arr: vec,
+                    };
+
+                    if let Some(lex::Lex::Ming2Zhi1) = iter.peek() {
+                        iter.next();
+                        let idents = parse_name_multi_statement_after_ming2zhi1(&mut iter)?;
+                        Ok(Statement::Define {
+                            decl: declare,
+                            idents,
+                        })
+                    } else {
+                        Ok(Statement::Declare(declare))
                     }
                 }
-                _ => Err(Error::SomethingWentWrong),
+                _ => unimplemented!(), // 術, 物
             }
         }
-        a => unimplemented!("Parser encountered {:?}", a),
+        _ => Err(Error::SomethingWentWrong),
     }
 }
 
