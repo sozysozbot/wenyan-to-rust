@@ -98,7 +98,8 @@ fn compile_define(
                     env.ans_counter,
                     compile_optional_literal(&env, data_arr.get(i), *type_)
                 ));
-                env.variables_not_yet_named.push(format!("_ans{}", env.ans_counter));
+                env.variables_not_yet_named
+                    .push(format!("_ans{}", env.ans_counter));
             }
             Some(ident) => {
                 ans.push_str(&format!(
@@ -321,7 +322,8 @@ fn compile_name_multi_statement(mut env: &mut Env, idents: &[parse::Identifier])
 
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
     match st {
-        parse::Statement::Reference { data, ident: None } => { /* not named */
+        parse::Statement::Reference { data, ident: None } => {
+            /* not named */
             env.ans_counter += 1;
             let r = format!(
                 "{}let _ans{} = {};\n",
@@ -330,11 +332,15 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
                 compile_literal(&env, data)
             );
 
-            env.variables_not_yet_named.push(format!("_ans{}", env.ans_counter));
+            env.variables_not_yet_named
+                .push(format!("_ans{}", env.ans_counter));
 
             return r;
-        },
-        parse::Statement::Reference { data, ident: Some(ident) } => {
+        }
+        parse::Statement::Reference {
+            data,
+            ident: Some(ident),
+        } => {
             env.ans_counter += 1;
             let r = format!(
                 "{}let _ans{} = {};\n{}let {}{} = _ans{};\n",
@@ -351,7 +357,7 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
                 env.ans_counter,
             );
             return r;
-        },
+        }
         parse::Statement::NameMulti { idents } => {
             return compile_name_multi_statement(&mut env, &idents)
         }
@@ -376,7 +382,8 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> String {
                     env.ans_counter,
                     compile_optional_literal(&env, data_arr.get(i), *type_)
                 ));
-                env.variables_not_yet_named.push(format!("_ans{}", env.ans_counter));
+                env.variables_not_yet_named
+                    .push(format!("_ans{}", env.ans_counter));
             }
             return r;
         }

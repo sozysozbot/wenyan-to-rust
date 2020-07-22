@@ -115,6 +115,14 @@ fn interpret_intnum(num: &lex::IntNum) -> i64 {
 
         &[IntDigit(c), IntMult(Bai3)] => 100 * c.to_num(),
 
+        &[IntDigit(c), IntMult(Bai3), IntDigit(d), IntMult(Shi2)] => {
+            100 * c.to_num() + 10 * d.to_num()
+        }
+
+        &[IntDigit(c), IntMult(Bai3), IntMult(Shi2), IntDigit(e)] => {
+            100 * c.to_num() + 10 + e.to_num()
+        }
+
         &[IntDigit(c), IntMult(Bai3), IntDigit(d), IntMult(Shi2), IntDigit(e)] => {
             100 * c.to_num() + 10 * d.to_num() + e.to_num()
         }

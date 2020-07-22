@@ -428,11 +428,19 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
                 '嘗' => get_keyword(&mut iter, &['嘗', '觀'], Lex::Wu2Chang2Guan1)?,
                 a => return Err(Error::UnexpectedCharAfter('吾', a)),
             },
-            '中' => match iter.next().ok_or(Error::UnexpectedEOFAfter('中'))?{
-                '有' => get_keyword(&mut iter,  &['有', '陽', '乎'], Lex::LogicBinaryOp(LogicBinaryOp::Zhong1You3Yang2Hu1))?,
-                '無' => get_keyword(&mut iter,  &['無', '陰', '乎'], Lex::LogicBinaryOp(LogicBinaryOp::Zhong1Wu2Yin1Hu1))?,
+            '中' => match iter.next().ok_or(Error::UnexpectedEOFAfter('中'))? {
+                '有' => get_keyword(
+                    &mut iter,
+                    &['有', '陽', '乎'],
+                    Lex::LogicBinaryOp(LogicBinaryOp::Zhong1You3Yang2Hu1),
+                )?,
+                '無' => get_keyword(
+                    &mut iter,
+                    &['無', '陰', '乎'],
+                    Lex::LogicBinaryOp(LogicBinaryOp::Zhong1Wu2Yin1Hu1),
+                )?,
                 a => return Err(Error::UnexpectedCharAfter('中', a)),
-            }
+            },
             '為' => get_keyword(&mut iter, &['為', '是'], Lex::Wei2Shi4)?,
             '昔' => get_keyword(&mut iter, &['昔', '之'], Lex::Xi1Zhi1)?,
             '云' => get_keyword(&mut iter, &['云', '云'], Lex::Yun2Yun2)?,
