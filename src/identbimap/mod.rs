@@ -73,6 +73,16 @@ impl IdentBiMap {
         }
     }
 
+    fn insert_stmts(
+        &mut self,
+        statements: &[parse::Statement],
+        conversion_table: &HashMap<String, String>,
+    ) {
+        for s in statements {
+            self.insert_stmt(&s, &conversion_table)
+        }
+    }
+
     fn insert_dat(&mut self, dat: &parse::Data, conversion_table: &HashMap<String, String>) {
         if let parse::Data::Identifier(id) = dat {
             self.insert_ident(id.clone(), &conversion_table)
@@ -106,6 +116,23 @@ impl IdentBiMap {
         }
     }
 
+    fn insert_math(&mut self, math: &parse::MathKind, conversion_table: &HashMap<String, String>) {
+        match math {
+            parse::MathKind::ArithUnaryMath(data) => {
+                self.insert_data_or_qi2(data, &conversion_table)
+            }
+
+            parse::MathKind::ArithBinaryMath(_, data1, _, data2)
+            | parse::MathKind::ModMath(_, data1, _, data2) => {
+                self.insert_data_or_qi2(data1, &conversion_table);
+                self.insert_data_or_qi2(data2, &conversion_table);
+            }
+            parse::MathKind::BooleanAlgebra(ident1, ident2, _) => {
+                self.insert_ident(ident1.clone(), &conversion_table);
+                self.insert_ident(ident2.clone(), &conversion_table);
+            }
+        }
+    }
     fn insert_stmt(&mut self, st: &parse::Statement, conversion_table: &HashMap<String, String>) {
         match st {
             parse::Statement::ArrayFill {
@@ -150,50 +177,22 @@ impl IdentBiMap {
                     self.insert_ident(id.clone(), &conversion_table);
                 }
             }
-            parse::Statement::Math {
-                math: parse::MathKind::ArithUnaryMath(data),
-            } => {
-                self.insert_data_or_qi2(data, &conversion_table);
-            }
-            parse::Statement::Math {
-                math: parse::MathKind::ArithBinaryMath(_, data1, _, data2),
-            }
-            | parse::Statement::Math {
-                math: parse::MathKind::ModMath(_, data1, _, data2),
-            } => {
-                self.insert_data_or_qi2(data1, &conversion_table);
-                self.insert_data_or_qi2(data2, &conversion_table);
-            }
-            parse::Statement::Math {
-                math: parse::MathKind::BooleanAlgebra(ident1, ident2, _),
-            } => {
-                self.insert_ident(ident1.clone(), &conversion_table);
-                self.insert_ident(ident2.clone(), &conversion_table);
-            }
+            parse::Statement::Math { math } => self.insert_math(math, &conversion_table),
             parse::Statement::Assign { ident, data } => {
                 self.insert_ident(ident.clone(), &conversion_table);
                 self.mutable_idents.insert(ident.clone());
                 self.insert_data_or_qi2(data, &conversion_table);
             }
             parse::Statement::Print | parse::Statement::Flush => {}
-            parse::Statement::ForEnum { statements, num: _ } => {
-                for s in statements {
-                    self.insert_stmt(&s, &conversion_table)
-                }
+            parse::Statement::ForEnum { statements, num: _ }
+            | parse::Statement::Loop { statements } => {
+                self.insert_stmts(&statements, &conversion_table)
             }
-            parse::Statement::Loop { statements } => {
-                for s in statements {
-                    self.insert_stmt(&s, &conversion_table)
-                }
-            }
-            parse::Statement::Declare {
-                0:
-                    parse::DeclareStatement {
-                        how_many_variables: _,
-                        type_: _,
-                        data_arr,
-                    },
-            } => {
+            parse::Statement::Declare(parse::DeclareStatement {
+                how_many_variables: _,
+                type_: _,
+                data_arr,
+            }) => {
                 for dat in data_arr {
                     self.insert_dat(dat, &conversion_table);
                 }
@@ -208,9 +207,7 @@ impl IdentBiMap {
             }
             parse::Statement::ForEnumIdent { ident, statements } => {
                 self.insert_ident(ident.clone(), &conversion_table);
-                for s in statements {
-                    self.insert_stmt(&s, &conversion_table)
-                }
+                self.insert_stmts(&statements, &conversion_table)
             }
             parse::Statement::Define {
                 idents,
