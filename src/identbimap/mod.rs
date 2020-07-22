@@ -108,6 +108,18 @@ impl IdentBiMap {
 
     fn insert_stmt(&mut self, st: &parse::Statement, conversion_table: &HashMap<String, String>) {
         match st {
+            parse::Statement::ArrayFill {
+                what_to_fill,
+                elems,
+            } => {
+                self.insert_data_or_qi2(&what_to_fill, &conversion_table);
+                if let parse::DataOrQi2::Data(parse::Data::Identifier(ident)) = what_to_fill {
+                    self.mutable_idents.insert(ident.clone());
+                }
+                for e in elems {
+                    self.insert_dat(&e, &conversion_table);
+                }
+            }
             parse::Statement::If {
                 ifcase: (ifexpr, ifcase),
                 elseifcases,

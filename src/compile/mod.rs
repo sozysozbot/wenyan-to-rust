@@ -411,6 +411,31 @@ fn compile_if(
 
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<String> {
     match st {
+        parse::Statement::ArrayFill {
+            what_to_fill: parse::DataOrQi2::Data(parse::Data::Identifier(ident)),
+            elems,
+        } => {
+            let r = vec![format!(
+                "{}{}.append(&mut vec![{}]);\n",
+                "    ".repeat(env.indent_level),
+                env.ident_map.translate_from_hanzi(&ident),
+                elems
+                    .iter()
+                    .map(|e| compile_literal(&env, e))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )];
+
+            return r;
+        }
+        parse::Statement::ArrayFill {
+            what_to_fill: parse::DataOrQi2::Data(a),
+            elems,
+        } => panic!("充 must be followed by an identifier or 其"),
+        parse::Statement::ArrayFill {
+            what_to_fill: parse::DataOrQi2::Qi2,
+            elems,
+        } => unimplemented!("filling qi2"),
         parse::Statement::If {
             ifcase,
             elseifcases,

@@ -106,6 +106,9 @@ pub enum Lex {
     /// 若其不然者; not found in spec.html
     Ruo4Qi2Bu4Ran2Zhe3,
 
+    /// 充
+    Chong1,
+
     ArithBinaryOp(ArithBinaryOp),
     LogicBinaryOp(LogicBinaryOp),
     IfLogicOp(IfLogicOp),
@@ -453,6 +456,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
         }
 
         ans.push(match c {
+            '充' => Lex::Chong1,
             '變' => Lex::Bian4Change,
             '也' => Lex::Yun2Yun2OrYe3,
             '夫' => Lex::Fu2,

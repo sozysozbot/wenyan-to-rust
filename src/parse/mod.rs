@@ -46,7 +46,10 @@ pub enum Statement {
         data: Data,
         ident: Option<Identifier>,
     },
-    // Array,
+    ArrayFill {
+        what_to_fill: DataOrQi2,
+        elems: Vec<Data>,
+    },
     Flush,
     // Break,
     // Comment,
@@ -464,6 +467,36 @@ fn parse_ifexpression_plus_zhe3(mut iter: &mut LexIter<'_>) -> Result<IfCond, Er
 fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
     let token = iter.next().ok_or(Error::UnexpectedEOF)?;
     match token {
+        lex::Lex::Chong1 => {
+            // array_push_statement        : '充' (IDENTIFIER|'其') (PREPOSITION_RIGHT data)+ name_single_statement?;
+            let what_to_fill = parse_data_or_qi2(&mut iter)?;
+            if let lex::Lex::Preposition(lex::Preposition::Yi3) =
+                iter.next().ok_or(Error::UnexpectedEOF)?
+            {
+                let mut elems = vec![parse_data(&mut iter)?];
+                loop {
+                    match iter.peek() {
+                        Some(lex::Lex::Preposition(lex::Preposition::Yi3)) => {
+                            iter.next();
+                            elems.push(parse_data(&mut iter)?);
+                        }
+                        _ => break,
+                    }
+                }
+
+                match iter.peek() {
+                    Some(lex::Lex::Ming2Zhi1) => unimplemented!("ming2zhi1 after array"), // remaining: name_single_statement?
+                    _ => {
+                        return Ok(Statement::ArrayFill {
+                            what_to_fill,
+                            elems,
+                        })
+                    }
+                }
+            } else {
+                return Err(Error::SomethingWentWrong);
+            }
+        }
         lex::Lex::Ruo4Qi2Bu4Ran2Zhe3 => {
             let (ifstmts, elseifcases, elsecase) = parse_if_statement_after_zhe3(&mut iter)?;
             return Ok(Statement::If {
