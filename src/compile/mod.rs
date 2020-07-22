@@ -420,25 +420,21 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
         parse::Statement::ArrayFill {
             what_to_fill: parse::DataOrQi2::Data(parse::Data::Identifier(ident)),
             elems,
-        } => {
-            let r = vec![(
-                env.indent_level,
-                format!(
-                    "{}.append(&mut vec![{}]);",
-                    env.ident_map.translate_from_hanzi(&ident),
-                    elems
-                        .iter()
-                        .map(|e| compile_literal(&env, e))
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                ),
-            )];
-
-            r
-        }
+        } => vec![(
+            env.indent_level,
+            format!(
+                "{}.append(&mut vec![{}]);",
+                env.ident_map.translate_from_hanzi(&ident),
+                elems
+                    .iter()
+                    .map(|e| compile_literal(&env, e))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+        )],
         parse::Statement::ArrayFill {
-            what_to_fill: parse::DataOrQi2::Data(a),
-            elems,
+            what_to_fill: parse::DataOrQi2::Data(_),
+            elems: _,
         } => panic!("充 must be followed by an identifier or 其"),
         parse::Statement::ArrayFill {
             what_to_fill: parse::DataOrQi2::Qi2,
@@ -560,6 +556,25 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
         parse::Statement::ForEnum { num, statements } => compile_forenum(&env, *num, &statements),
         parse::Statement::ForEnumIdent { ident, statements } => {
             compile_forenum_ident(&mut env, ident, statements)
+        }
+        parse::Statement::ForArr { list, elem, stmts } => {
+            let mut inner = vec![];
+            env.indent_level += 1;
+            for st in stmts {
+                inner.append(&mut compile_statement(&mut env, &st));
+            }
+            env.indent_level -= 1;
+            let mut r = vec![(
+                env.indent_level,
+                format!(
+                    "for {} in {} {{",
+                    env.ident_map.translate_from_hanzi(&elem),
+                    env.ident_map.translate_from_hanzi(list)
+                ),
+            )];
+            r.append(&mut inner);
+            r.push((env.indent_level, "}".to_string()));
+            r
         }
         parse::Statement::Loop { statements } => compile_loop(&mut env, statements),
     }

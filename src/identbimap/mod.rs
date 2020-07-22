@@ -133,6 +133,11 @@ impl IdentBiMap {
     }
     fn insert_stmt(&mut self, st: &parse::Statement, conversion_table: &HashMap<String, String>) {
         match st {
+            parse::Statement::ForArr { list, elem, stmts } => {
+                self.insert_ident(list.clone(), &conversion_table);
+                self.insert_ident(elem.clone(), &conversion_table);
+                self.insert_stmts(&stmts, &conversion_table)
+            }
             parse::Statement::ArrayFill {
                 what_to_fill,
                 elems,

@@ -14,6 +14,11 @@ pub enum Statement {
         ident: Identifier,
         statements: Vec<Statement>,
     },
+    ForArr {
+        list: Identifier,
+        elem: Identifier,
+        stmts: Vec<Statement>,
+    },
     Loop {
         statements: Vec<Statement>,
     },
@@ -463,6 +468,35 @@ fn parse_ifexpression_plus_zhe3(mut iter: &mut LexIter<'_>) -> Result<IfCond, Er
 
 fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
     match iter.next().ok_or(Error::UnexpectedEOF)? {
+        lex::Lex::Fan2 => {
+            if let lex::Lex::Identifier(list) = iter.next().ok_or(Error::UnexpectedEOF)? {
+                if let lex::Lex::Zhong1Zhi1 = iter.next().ok_or(Error::UnexpectedEOF)? {
+                    if let lex::Lex::Identifier(elem) = iter.next().ok_or(Error::UnexpectedEOF)? {
+                        let mut stmts = vec![];
+                        loop {
+                            match iter.peek().ok_or(Error::SomethingWentWrong)? {
+                                lex::Lex::Yun2Yun2OrYe3 => {
+                                    iter.next();
+                                    return Ok(Statement::ForArr {
+                                        list: Identifier(list.to_string()),
+                                        elem: Identifier(elem.to_string()),
+                                        stmts,
+                                    });
+                                }
+                                _ => {}
+                            }
+                            stmts.push(parse_statement(&mut iter)?);
+                        }
+                    } else {
+                        Err(Error::SomethingWentWrong)
+                    }
+                } else {
+                    Err(Error::SomethingWentWrong)
+                }
+            } else {
+                Err(Error::SomethingWentWrong)
+            }
+        }
         lex::Lex::Chong1 => {
             // array_push_statement        : '充' (IDENTIFIER|'其') (PREPOSITION_RIGHT data)+ name_single_statement?;
             let what_to_fill = parse_data_or_qi2(&mut iter)?;

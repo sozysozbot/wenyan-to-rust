@@ -109,6 +109,12 @@ pub enum Lex {
     /// 充
     Chong1,
 
+    /// 凡
+    Fan2,
+
+    /// 中之
+    Zhong1Zhi1,
+
     ArithBinaryOp(ArithBinaryOp),
     LogicBinaryOp(LogicBinaryOp),
     IfLogicOp(IfLogicOp),
@@ -456,6 +462,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
         }
 
         ans.push(match c {
+            '凡' => Lex::Fan2,
             '充' => Lex::Chong1,
             '變' => Lex::Bian4Change,
             '也' => Lex::Yun2Yun2OrYe3,
@@ -493,6 +500,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
                     &['無', '陰', '乎'],
                     Lex::LogicBinaryOp(LogicBinaryOp::Zhong1Wu2Yin1Hu1),
                 )?,
+                '之' => Lex::Zhong1Zhi1,
                 a => return Err(Error::UnexpectedCharAfter('中', a)),
             },
             '為' => get_keyword(&mut iter, &['為', '是'], Lex::Wei2Shi4)?,
