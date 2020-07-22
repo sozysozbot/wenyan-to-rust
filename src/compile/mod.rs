@@ -329,30 +329,45 @@ fn compile_ifbinary(
     ifbody: &parse::IfBody,
 ) -> Vec<String> {
     let parse::IfBody { ifcase, elsecase } = ifbody;
-    let mut inner = vec![];
+    let mut if_inner = vec![];
 
     env.indent_level += 1;
-
-    if !elsecase.is_empty() {
-        unimplemented!("binary else")
-    }
-
     for st in ifcase {
-        inner.append(&mut compile_statement(&mut env, &st));
+        if_inner.append(&mut compile_statement(&mut env, &st));
     }
-
     env.indent_level -= 1;
 
-    let mut r = vec![format!(
-        "{}if {} {} {} {{\n",
-        "    ".repeat(env.indent_level),
-        compile_dataorqi2(&mut env, data1),
-        op.to_str(),
-        compile_dataorqi2(&mut env, data2),
-    )];
-    r.append(&mut inner);
-    r.push(format!("{}}}\n", "    ".repeat(env.indent_level)));
-    return r;
+    if elsecase.is_empty() {
+        let mut r = vec![format!(
+            "{}if {} {} {} {{\n",
+            "    ".repeat(env.indent_level),
+            compile_dataorqi2(&mut env, data1),
+            op.to_str(),
+            compile_dataorqi2(&mut env, data2),
+        )];
+        r.append(&mut if_inner);
+        r.push(format!("{}}}\n", "    ".repeat(env.indent_level)));
+        return r;
+    } else {
+        let mut else_inner = vec![];
+        env.indent_level += 1;
+        for st in elsecase {
+            else_inner.append(&mut compile_statement(&mut env, &st));
+        }
+        env.indent_level -= 1;
+        let mut r = vec![format!(
+            "{}if {} {} {} {{\n",
+            "    ".repeat(env.indent_level),
+            compile_dataorqi2(&mut env, data1),
+            op.to_str(),
+            compile_dataorqi2(&mut env, data2),
+        )];
+        r.append(&mut if_inner);
+        r.push(format!("{}}} else {{\n", "    ".repeat(env.indent_level)));
+        r.append(&mut else_inner);
+        r.push(format!("{}}}\n", "    ".repeat(env.indent_level)));
+        return r;
+    }
 }
 
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<String> {
