@@ -321,30 +321,39 @@ fn compile_name_multi_statement(mut env: &mut Env, idents: &[parse::Identifier])
     res
 }
 
-fn compile_ifbinary(
+fn compile_if(
     mut env: &mut Env,
-    data1: &parse::DataOrQi2,
-    op: lex::IfLogicOp,
-    data2: &parse::DataOrQi2,
-    ifcase: &[parse::Statement],
+    ifcase: &parse::CondPlusStatements,
+    elseifcases: &[parse::CondPlusStatements],
     elsecase: &[parse::Statement],
 ) -> Vec<String> {
+    let (ifcond, ifstmts) = ifcase;
+    if !elseifcases.is_empty() {
+        unimplemented!("binary elseif")
+    }
     let mut if_inner = vec![];
 
     env.indent_level += 1;
-    for st in ifcase {
+    for st in ifstmts {
         if_inner.append(&mut compile_statement(&mut env, &st));
     }
     env.indent_level -= 1;
-
-    if elsecase.is_empty() {
-        let mut r = vec![format!(
+    let mut r = vec![match ifcond {
+        parse::IfExpression::Binary(data1, op, data2) => format!(
             "{}if {} {} {} {{\n",
             "    ".repeat(env.indent_level),
             compile_dataorqi2(&mut env, data1),
             op.to_str(),
             compile_dataorqi2(&mut env, data2),
-        )];
+        ),
+        parse::IfExpression::Unary(data1) => format!(
+            "{}if {} {{\n",
+            "    ".repeat(env.indent_level),
+            compile_dataorqi2(&mut env, data1),
+        ),
+    }];
+
+    if elsecase.is_empty() {
         r.append(&mut if_inner);
         r.push(format!("{}}}\n", "    ".repeat(env.indent_level)));
         return r;
@@ -355,56 +364,7 @@ fn compile_ifbinary(
             else_inner.append(&mut compile_statement(&mut env, &st));
         }
         env.indent_level -= 1;
-        let mut r = vec![format!(
-            "{}if {} {} {} {{\n",
-            "    ".repeat(env.indent_level),
-            compile_dataorqi2(&mut env, data1),
-            op.to_str(),
-            compile_dataorqi2(&mut env, data2),
-        )];
-        r.append(&mut if_inner);
-        r.push(format!("{}}} else {{\n", "    ".repeat(env.indent_level)));
-        r.append(&mut else_inner);
-        r.push(format!("{}}}\n", "    ".repeat(env.indent_level)));
-        return r;
-    }
-}
 
-fn compile_ifunary(
-    mut env: &mut Env,
-    data1: &parse::DataOrQi2,
-    ifcase: &[parse::Statement],
-    elsecase: &[parse::Statement],
-) -> Vec<String> {
-    let mut if_inner = vec![];
-
-    env.indent_level += 1;
-    for st in ifcase {
-        if_inner.append(&mut compile_statement(&mut env, &st));
-    }
-    env.indent_level -= 1;
-
-    if elsecase.is_empty() {
-        let mut r = vec![format!(
-            "{}if {} {{\n",
-            "    ".repeat(env.indent_level),
-            compile_dataorqi2(&mut env, data1),
-        )];
-        r.append(&mut if_inner);
-        r.push(format!("{}}}\n", "    ".repeat(env.indent_level)));
-        return r;
-    } else {
-        let mut else_inner = vec![];
-        env.indent_level += 1;
-        for st in elsecase {
-            else_inner.append(&mut compile_statement(&mut env, &st));
-        }
-        env.indent_level -= 1;
-        let mut r = vec![format!(
-            "{}if {} {{\n",
-            "    ".repeat(env.indent_level),
-            compile_dataorqi2(&mut env, data1),
-        )];
         r.append(&mut if_inner);
         r.push(format!("{}}} else {{\n", "    ".repeat(env.indent_level)));
         r.append(&mut else_inner);
@@ -416,24 +376,11 @@ fn compile_ifunary(
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<String> {
     match st {
         parse::Statement::If {
-            ifcase: (parse::IfExpression::Unary(data), ifcase),
+            ifcase,
             elseifcases,
             elsecase,
         } => {
-            if !elseifcases.is_empty() {
-                unimplemented!("binary elseif")
-            }
-            return compile_ifunary(&mut env, data, ifcase, elsecase);
-        }
-        parse::Statement::If {
-            ifcase: (parse::IfExpression::Binary(data1, op, data2), ifcase),
-            elseifcases,
-            elsecase,
-        } => {
-            if !elseifcases.is_empty() {
-                unimplemented!("binary elseif")
-            }
-            return compile_ifbinary(&mut env, data1, *op, data2, ifcase, elsecase);
+            return compile_if(&mut env, ifcase, elseifcases, elsecase);
         }
         parse::Statement::Reference { data, ident: None } => {
             /* not named */
