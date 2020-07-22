@@ -1,7 +1,7 @@
 # wenyan-to-rust
 
 ## current status
-Can compile all the samples in [明義第一](https://github.com/wenyan-lang/book/blob/master/01%20%E6%98%8E%E7%BE%A9%E7%AC%AC%E4%B8%80.md), [變數第二](https://github.com/wenyan-lang/book/blob/master/02%20%E8%AE%8A%E6%95%B8%E7%AC%AC%E4%BA%8C.md) and [算術第三](https://github.com/wenyan-lang/book/blob/master/03%20%E7%AE%97%E8%A1%93%E7%AC%AC%E4%B8%89.md).
+Can compile all the samples in [明義第一](https://github.com/wenyan-lang/book/blob/master/01%20%E6%98%8E%E7%BE%A9%E7%AC%AC%E4%B8%80.md), [變數第二](https://github.com/wenyan-lang/book/blob/master/02%20%E8%AE%8A%E6%95%B8%E7%AC%AC%E4%BA%8C.md), [算術第三](https://github.com/wenyan-lang/book/blob/master/03%20%E7%AE%97%E8%A1%93%E7%AC%AC%E4%B8%89.md) and [決策第四](https://github.com/wenyan-lang/book/blob/master/04%20%E6%B1%BA%E7%AD%96%E7%AC%AC%E5%9B%9B.md).
 
 ## samples
 
