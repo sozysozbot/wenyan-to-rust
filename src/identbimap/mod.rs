@@ -169,6 +169,11 @@ impl IdentBiMap {
                     self.insert_stmt(&s, &conversion_table)
                 }
             }
+            parse::Statement::Loop { statements } => {
+                for s in statements {
+                    self.insert_stmt(&s, &conversion_table)
+                }
+            }
             parse::Statement::Declare {
                 0:
                     parse::DeclareStatement {

@@ -369,7 +369,7 @@ fn compile_ifcond(mut env: &mut Env, ifcond: &parse::IfCond, keyword: &str) -> S
             "    ".repeat(env.indent_level),
             keyword,
             compile_dataorqi2(&mut env, &parse::DataOrQi2::Qi2),
-        )
+        ),
     }
 }
 
@@ -557,6 +557,9 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<String> {
         parse::Statement::ForEnumIdent { ident, statements } => {
             return compile_forenum_ident(&mut env, ident, statements);
         }
+        parse::Statement::Loop { statements } => {
+            return compile_loop(&mut env, statements);
+        }
     }
 }
 
@@ -598,6 +601,17 @@ fn compile_forenum_ident(
         ),
         format!("{}}}\n", "    ".repeat(env.indent_level),),
     ]);
+    return r;
+}
+
+fn compile_loop(mut env: &mut Env, statements: &[parse::Statement]) -> Vec<String> {
+    let mut r = vec![format!("{}loop {{\n", "    ".repeat(env.indent_level),)];
+    env.indent_level += 1;
+    for st in statements {
+        r.append(&mut compile_statement(&mut env, &st));
+    }
+    env.indent_level -= 1;
+    r.push(format!("{}}}\n", "    ".repeat(env.indent_level),));
     return r;
 }
 

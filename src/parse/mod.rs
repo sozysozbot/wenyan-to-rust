@@ -14,6 +14,9 @@ pub enum Statement {
         ident: Identifier,
         statements: Vec<Statement>,
     },
+    Loop {
+        statements: Vec<Statement>,
+    },
     InitDefine {
         type_: lex::Type,
         data: Data,
@@ -556,6 +559,18 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
         }
         lex::Lex::You3 => {
             return parse_init_define_statement_after_you3(&mut iter);
+        }
+        lex::Lex::Heng2Wei2Shi4 => {
+            let mut statements = vec![];
+            loop {
+                match iter.peek().ok_or(Error::UnexpectedEOF)? {
+                    &&lex::Lex::Yun2Yun2OrYe3 => {
+                        iter.next();
+                        return Ok(Statement::Loop { statements });
+                    }
+                    _ => statements.push(parse_statement(&mut iter)?),
+                }
+            }
         }
         lex::Lex::Wei2Shi4 => {
             return parse_for_enum_statement_after_wei2shi4(&mut iter);

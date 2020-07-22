@@ -543,7 +543,8 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
                             iter.next();
                             get_keyword(&mut iter, &['然', '者'], Lex::Ruo4Qi2Ran2Zhe3)?
                         }
-                        Some('不') => { // Note that 若 + 其 + 不等於 is a possibility
+                        Some('不') => {
+                            // Note that 若 + 其 + 不等於 is a possibility
                             match iter.peek_nth(2) {
                                 Some('然') => {
                                     iter.next();
