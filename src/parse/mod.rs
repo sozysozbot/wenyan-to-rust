@@ -21,8 +21,7 @@ pub enum Statement {
         idents: Vec<Identifier>,
     },
     // Function,
-    IfUnary(DataOrQi2, IfBody),
-    IfBinary(DataOrQi2, lex::IfLogicOp, DataOrQi2, IfBody),
+    If(IfExpression, IfBody),
     // Return,
     Math {
         math: MathKind,
@@ -45,6 +44,12 @@ pub enum Statement {
     NameMulti {
         idents: Vec<Identifier>,
     },
+}
+
+#[derive(Debug, Clone)]
+pub enum IfExpression {
+    Unary(DataOrQi2),
+    Binary(DataOrQi2, lex::IfLogicOp, DataOrQi2)
 }
 
 //#[derive(Debug)]
@@ -413,7 +418,7 @@ fn parse_statement(
                 Some(lex::Lex::Zhe3) => {
                     iter.next();
                     let ifbody = parse_if_statement_after_zhe3(&mut iter)?;
-                    return Ok(Statement::IfUnary(data, ifbody));
+                    return Ok(Statement::If(IfExpression::Unary(data), ifbody));
                 }
                 Some(lex::Lex::IfLogicOp(op)) => {
                     iter.next();
@@ -421,7 +426,7 @@ fn parse_statement(
                     match iter.next().ok_or(Error::UnexpectedEOF)? {
                         lex::Lex::Zhe3 => {
                             let ifbody = parse_if_statement_after_zhe3(&mut iter)?;
-                            return Ok(Statement::IfBinary(data, *op, data2, ifbody));
+                            return Ok(Statement::If(IfExpression::Binary(data, *op, data2), ifbody));
                         }
                         _ => return Err(Error::SomethingWentWrong),
                     }

@@ -372,8 +372,8 @@ fn compile_ifbinary(
 
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<String> {
     match st {
-        parse::Statement::IfUnary(data, ifbody) => unimplemented!("unary if"),
-        parse::Statement::IfBinary(data1, op, data2, ifbody) => {
+        parse::Statement::If(parse::IfExpression::Unary(data), ifbody) => unimplemented!("unary if"),
+        parse::Statement::If(parse::IfExpression::Binary(data1, op, data2), ifbody) => {
             return compile_ifbinary(&mut env, data1, *op, data2, ifbody)
         }
         parse::Statement::Reference { data, ident: None } => {

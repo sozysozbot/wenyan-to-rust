@@ -94,6 +94,9 @@ pub enum Lex {
     /// 若非
     Ruo4Fei1,
 
+    /// 或若; not found in spec.html
+    Huo4Ruo4, 
+
     ArithBinaryOp(ArithBinaryOp),
     LogicBinaryOp(LogicBinaryOp),
     IfLogicOp(IfLogicOp),
@@ -485,6 +488,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
             '所' => get_keyword(&mut iter, &['所', '餘', '幾', '何'], Lex::Suo3Yu2Ji3He2)?,
             '書' => get_keyword(&mut iter, &['書', '之'], Lex::Shu1Zhi1)?,
             '名' => get_keyword(&mut iter, &['名', '之'], Lex::Ming2Zhi1)?,
+            '或' => get_keyword(&mut iter, &['或', '若'], Lex::Huo4Ruo4)?,
             '等' => get_keyword(
                 &mut iter,
                 &['等', '於'],
