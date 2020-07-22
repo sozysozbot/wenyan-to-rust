@@ -7,12 +7,10 @@ fn to_pinyin(ident: parse::Identifier, conversion_table: &HashMap<String, String
     let parse::Identifier(i) = ident;
     let vec = i
         .chars()
-        .map(
-            |c| match conversion_table.get(&format!("{:X}", c as u32).to_string()) {
-                None => "_".to_string(),
-                Some(a) => a.split(" ").collect::<Vec<_>>()[0].to_string(),
-            },
-        )
+        .map(|c| match conversion_table.get(&format!("{:X}", c as u32)) {
+            None => "_".to_string(),
+            Some(a) => a.split(' ').collect::<Vec<_>>()[0].to_string(),
+        })
         .collect::<Vec<_>>();
     vec.join("")
 }
@@ -35,7 +33,7 @@ impl IdentBiMap {
         self.mutable_idents.contains(id)
     }
 
-    pub fn new(parsed: &Vec<parse::Statement>, conversion_table: &HashMap<String, String>) -> Self {
+    pub fn new(parsed: &[parse::Statement], conversion_table: &HashMap<String, String>) -> Self {
         let mut ans = IdentBiMap {
             bimap: BiMap::new(),
             mutable_idents: HashSet::new(),

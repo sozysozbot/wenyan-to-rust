@@ -403,7 +403,7 @@ fn lex_ident_or_str_after_seeing_quote(
 ) -> Result<Lex, Error> {
     let peek = iter.peek();
     match peek {
-        None => return Err(Error::NonterminatedIdentifier),
+        None => Err(Error::NonterminatedIdentifier),
         Some('「') => {
             iter.next(); /* parse string literal */
             let mut strlit = String::new();
@@ -419,7 +419,7 @@ fn lex_ident_or_str_after_seeing_quote(
                     Some(a) => strlit.push(a),
                 }
             }
-            return Ok(Lex::StringLiteral(strlit));
+            Ok(Lex::StringLiteral(strlit))
         }
         Some(_) => {
             /* parse identifier */
@@ -436,7 +436,7 @@ fn lex_ident_or_str_after_seeing_quote(
                 return Err(Error::EmptyIdentifier);
             }
 
-            return Ok(Lex::Identifier(ident));
+            Ok(Lex::Identifier(ident))
         }
     }
 }

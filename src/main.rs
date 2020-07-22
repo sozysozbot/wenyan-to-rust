@@ -345,7 +345,7 @@ fn main() -> std::io::Result<()> {
     let lex = lex::lex(&contents);
     if verbose_level > 0 || lex.is_err() {
         println!("\nlexer output: \n----------------------");
-        println!("{:?}", lex.clone());
+        println!("{:?}", lex);
         println!("----------------------");
     }
 

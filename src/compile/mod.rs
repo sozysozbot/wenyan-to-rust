@@ -81,7 +81,7 @@ fn compile_literal(env: &Env, v: &parse::Data) -> String {
 fn compile_define(
     env: &mut Env,
     decl: &parse::DeclareStatement,
-    idents: &Vec<parse::Identifier>,
+    idents: &[parse::Identifier],
 ) -> Vec<Line> {
     let parse::DeclareStatement {
         how_many_variables,
@@ -163,8 +163,8 @@ fn compile_forenum(env: &Env, num: i64, statements: &[parse::Statement]) -> Vec<
     }
     let mut r = vec![(env.indent_level, format!("for _ in 0..{} {{", num,))];
     r.append(&mut inner);
-    r.push((env.indent_level, format!("}}")));
-    return r;
+    r.push((env.indent_level, "}".to_string()));
+    r
 }
 
 fn compile_dataorqi2(env: &mut Env, a: &parse::DataOrQi2) -> String {
@@ -234,15 +234,14 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind) -> Vec<Line> {
         parse::MathKind::ArithUnaryMath(data) => {
             let a = compile_dataorqi2(&mut env, data);
             env.ans_counter += 1;
-            let r = vec![(env.indent_level, format!(
-                "let _ans{} = !{};",
-                env.ans_counter,
-                a,
-            ))];
+            let r = vec![(
+                env.indent_level,
+                format!("let _ans{} = !{};", env.ans_counter, a,),
+            )];
             env.variables_not_yet_named
                 .push(format!("_ans{}", env.ans_counter));
 
-            return r;
+            r
         }
     }
 }
@@ -271,17 +270,17 @@ fn compile_math_binary(
     );
 
     env.ans_counter += 1;
-    let r = vec![(env.indent_level, format!(
-        "let _ans{} = {} {} {};",
-        env.ans_counter,
-        left,
-        opstr,
-        right,
-    ))];
+    let r = vec![(
+        env.indent_level,
+        format!(
+            "let _ans{} = {} {} {};",
+            env.ans_counter, left, opstr, right,
+        ),
+    )];
     env.variables_not_yet_named
         .push(format!("_ans{}", env.ans_counter));
 
-    return r;
+    r
 }
 
 /// 加一以三。加六以九。名之曰「甲」。曰「乙」。
@@ -328,16 +327,19 @@ fn compile_name_multi_statement(mut env: &mut Env, idents: &[parse::Identifier])
             let tmpvarname = env.variables_not_yet_named
                 [env.variables_not_yet_named.len() + i - idents.len()]
             .clone();
-            res.push((env.indent_level, format!(
-                "let {}{} = {};",
-                if env.ident_map.is_mutable(&idents[i]) {
-                    "mut "
-                } else {
-                    ""
-                },
-                env.ident_map.translate_from_hanzi(&idents[i]),
-                tmpvarname.clone()
-            )));
+            res.push((
+                env.indent_level,
+                format!(
+                    "let {}{} = {};",
+                    if env.ident_map.is_mutable(&idents[i]) {
+                        "mut "
+                    } else {
+                        ""
+                    },
+                    env.ident_map.translate_from_hanzi(&idents[i]),
+                    tmpvarname.clone()
+                ),
+            ));
         }
     }
     if env.variables_not_yet_named.len() > idents.len() {
@@ -402,15 +404,15 @@ fn compile_if(
     }
 
     if !elsecase.is_empty() {
-        r.push((env.indent_level, format!("}} else {{")));
+        r.push((env.indent_level, "} else {".to_string()));
         env.indent_level += 1;
         for st in elsecase {
             r.append(&mut compile_statement(&mut env, &st));
         }
         env.indent_level -= 1;
     }
-    r.push((env.indent_level, format!("}}")));
-    return r;
+    r.push((env.indent_level, "}".to_string()));
+    r
 }
 
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
@@ -432,7 +434,7 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
                 ),
             )];
 
-            return r;
+            r
         }
         parse::Statement::ArrayFill {
             what_to_fill: parse::DataOrQi2::Data(a),
@@ -446,9 +448,7 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             ifcase,
             elseifcases,
             elsecase,
-        } => {
-            return compile_if(&mut env, ifcase, elseifcases, elsecase);
-        }
+        } => compile_if(&mut env, ifcase, elseifcases, elsecase),
         parse::Statement::Reference { data, ident: None } => {
             /* not named */
             env.ans_counter += 1;
@@ -464,7 +464,7 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             env.variables_not_yet_named
                 .push(format!("_ans{}", env.ans_counter));
 
-            return r;
+            r
         }
         parse::Statement::Reference {
             data,
@@ -490,18 +490,14 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
                     ),
                 ),
             ];
-            return r;
+            r
         }
-        parse::Statement::NameMulti { idents } => {
-            return compile_name_multi_statement(&mut env, &idents)
-        }
+        parse::Statement::NameMulti { idents } => compile_name_multi_statement(&mut env, &idents),
         parse::Statement::Flush => {
             env.variables_not_yet_named = vec![];
             vec![]
         }
-        parse::Statement::Math { math } => {
-            return compile_math(&mut env, math);
-        }
+        parse::Statement::Math { math } => compile_math(&mut env, math),
         parse::Statement::Declare(parse::DeclareStatement {
             how_many_variables,
             type_,
@@ -521,7 +517,7 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
                 env.variables_not_yet_named
                     .push(format!("_ans{}", env.ans_counter));
             }
-            return r;
+            r
         }
         parse::Statement::Print => {
             let mut r = format!(
@@ -539,33 +535,33 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             return vec![(env.indent_level, r)];
         }
         parse::Statement::Assign { ident, data } => {
-            return vec![(env.indent_level, format!(
-                "{} = {};",
-                env.ident_map.translate_from_hanzi(&ident),
-                compile_dataorqi2(&mut env, data)
-            ))]
+            return vec![(
+                env.indent_level,
+                format!(
+                    "{} = {};",
+                    env.ident_map.translate_from_hanzi(&ident),
+                    compile_dataorqi2(&mut env, data)
+                ),
+            )]
         }
         parse::Statement::InitDefine { type_, data, name } => {
-            let r = vec![(env.indent_level, format!(
-                "let {}{} = {};",
-                ifmutable_thenmut(&env, &name),
-                env.ident_map.translate_from_hanzi(&name),
-                compile_optional_literal(&env, Some(data), *type_)
-            ))];
-            return r;
+            let r = vec![(
+                env.indent_level,
+                format!(
+                    "let {}{} = {};",
+                    ifmutable_thenmut(&env, &name),
+                    env.ident_map.translate_from_hanzi(&name),
+                    compile_optional_literal(&env, Some(data), *type_)
+                ),
+            )];
+            r
         }
-        parse::Statement::Define { decl, idents } => {
-            return compile_define(&mut env, decl, &idents);
-        }
-        parse::Statement::ForEnum { num, statements } => {
-            return compile_forenum(&env, *num, &statements);
-        }
+        parse::Statement::Define { decl, idents } => compile_define(&mut env, decl, &idents),
+        parse::Statement::ForEnum { num, statements } => compile_forenum(&env, *num, &statements),
         parse::Statement::ForEnumIdent { ident, statements } => {
-            return compile_forenum_ident(&mut env, ident, statements);
+            compile_forenum_ident(&mut env, ident, statements)
         }
-        parse::Statement::Loop { statements } => {
-            return compile_loop(&mut env, statements);
-        }
+        parse::Statement::Loop { statements } => compile_loop(&mut env, statements),
     }
 }
 
@@ -594,43 +590,37 @@ fn compile_forenum_ident(
 
     env.indent_level -= 1;
     let mut r = vec![
-        (env.indent_level, format!(
-            "let mut _rand{} = 0.0;",
-            rand_n,
-        )),
-        (env.indent_level, format!(
-            "while _rand{} < {} {{",
-            rand_n,
-            env.ident_map.translate_from_hanzi(&ident),
-        )),
+        (env.indent_level, format!("let mut _rand{} = 0.0;", rand_n,)),
+        (
+            env.indent_level,
+            format!(
+                "while _rand{} < {} {{",
+                rand_n,
+                env.ident_map.translate_from_hanzi(&ident),
+            ),
+        ),
     ];
     r.append(&mut inner);
     r.append(&mut vec![
-        (env.indent_level + 1, format!(
-            "_rand{} += 1.0;",
-            rand_n,
-        )),
-        (env.indent_level, format!("}}"))
+        (env.indent_level + 1, format!("_rand{} += 1.0;", rand_n,)),
+        (env.indent_level, "}".to_string()),
     ]);
-    return r;
+    r
 }
 
 fn compile_loop(mut env: &mut Env, statements: &[parse::Statement]) -> Vec<Line> {
-    let mut r = vec![(env.indent_level, format!("loop {{"))];
+    let mut r = vec![(env.indent_level, "loop {".to_string())];
     env.indent_level += 1;
     for st in statements {
         r.append(&mut compile_statement(&mut env, &st));
     }
     env.indent_level -= 1;
-    r.push((env.indent_level, format!("}}" )));
-    return r;
+    r.push((env.indent_level, "}".to_string()));
+    r
 }
 
 use std::collections::HashMap;
-pub fn compile(
-    parsed: &Vec<parse::Statement>,
-    conversion_table: &HashMap<String, String>,
-) -> String {
+pub fn compile(parsed: &[parse::Statement], conversion_table: &HashMap<String, String>) -> String {
     let mut ans = vec![(0, "fn main() {".to_string())];
     let mut env = Env {
         ans_counter: 0,
