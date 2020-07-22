@@ -81,7 +81,7 @@ impl DivBinaryOp {
 #[derive(Debug)]
 pub enum MathKind {
     ArithBinaryMath(lex::ArithBinaryOp, DataOrQi2, lex::Preposition, DataOrQi2),
-    // ArithUnaryMath,
+    ArithUnaryMath(DataOrQi2),
     BooleanAlgebra(Identifier, Identifier, lex::LogicBinaryOp),
     ModMath(DivBinaryOp, DataOrQi2, lex::Preposition, DataOrQi2),
 }
@@ -247,7 +247,7 @@ fn parse_init_define_statement_after_you3(mut iter: &mut LexIter<'_>) -> Result<
 fn parse_for_enum_statement_after_wei2shi4(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
     match iter.next().ok_or(Error::UnexpectedEOF)? {
         lex::Lex::IntNum(num) => match iter.next().ok_or(Error::UnexpectedEOF)? {
-            lex::Lex::Bian4 => {
+            lex::Lex::Bian4Loop => {
                 let mut inner = vec![];
                 loop {
                     if iter.peek() == Some(&&lex::Lex::Yun2Yun2OrYe3) {
@@ -265,7 +265,7 @@ fn parse_for_enum_statement_after_wei2shi4(mut iter: &mut LexIter<'_>) -> Result
             _ => return Err(Error::SomethingWentWrong),
         },
         lex::Lex::Identifier(ident) => match iter.next().ok_or(Error::UnexpectedEOF)? {
-            lex::Lex::Bian4 => {
+            lex::Lex::Bian4Loop => {
                 let mut inner = vec![];
                 loop {
                     if iter.peek() == Some(&&lex::Lex::Yun2Yun2OrYe3) {
@@ -529,6 +529,12 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
 
             return Ok(Statement::Math {
                 math: MathKind::ArithBinaryMath(*op, data1, prep, data2),
+            });
+        }
+        lex::Lex::Bian4Change => {
+            let data = parse_data_or_qi2(&mut iter)?;
+            return Ok(Statement::Math {
+                math: MathKind::ArithUnaryMath(data),
             });
         }
         lex::Lex::You3 => {

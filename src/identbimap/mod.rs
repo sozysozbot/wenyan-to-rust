@@ -138,6 +138,11 @@ impl IdentBiMap {
                 }
             }
             parse::Statement::Math {
+                math: parse::MathKind::ArithUnaryMath(data),
+            } => {
+                self.insert_data_or_qi2(data, &conversion_table);
+            }
+            parse::Statement::Math {
                 math: parse::MathKind::ArithBinaryMath(_, data1, _, data2),
             }
             | parse::Statement::Math {

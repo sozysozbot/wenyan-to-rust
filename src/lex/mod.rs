@@ -19,7 +19,7 @@ pub enum Lex {
     Wei2Shi4,
 
     /// 遍
-    Bian4,
+    Bian4Loop,
 
     /// 恆為是
     Heng2Wei2Shi4,
@@ -96,6 +96,9 @@ pub enum Lex {
 
     /// 或若; not found in spec.html
     Huo4Ruo4,
+
+    /// 變
+    Bian4Change,
 
     ArithBinaryOp(ArithBinaryOp),
     LogicBinaryOp(LogicBinaryOp),
@@ -444,6 +447,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
         }
 
         ans.push(match c {
+            '變' => Lex::Bian4Change,
             '也' => Lex::Yun2Yun2OrYe3,
             '夫' => Lex::Fu2,
             '除' => Lex::Chu2,
@@ -458,7 +462,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
             '言' => Lex::Type(Type::Yan2),
             '爻' => Lex::Type(Type::Yao2),
             '曰' => Lex::Yue1,
-            '遍' => Lex::Bian4,
+            '遍' => Lex::Bian4Loop,
             '陰' => Lex::BoolValue(BoolValue::Yin1),
             '陽' => Lex::BoolValue(BoolValue::Yang2),
             '者' => Lex::Zhe3,

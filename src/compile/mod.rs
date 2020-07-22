@@ -210,21 +210,44 @@ fn compile_dataorqi2(env: &mut Env, a: &parse::DataOrQi2) -> String {
 /// ```
 
 fn compile_math(mut env: &mut Env, math: &parse::MathKind) -> Vec<String> {
-    let (opstr, data1, prep, data2) = match math {
-        parse::MathKind::BooleanAlgebra(ident1, ident2, op) => (
+    match math {
+        parse::MathKind::BooleanAlgebra(ident1, ident2, op) => compile_math_binary(
+            &mut env,
             op.to_str(),
             parse::DataOrQi2::Data(parse::Data::Identifier(ident1.clone())),
             lex::Preposition::Yi3, /* whichever is fine */
             parse::DataOrQi2::Data(parse::Data::Identifier(ident2.clone())),
         ),
         parse::MathKind::ArithBinaryMath(op, data1, prep, data2) => {
-            (op.to_str(), data1.clone(), *prep, data2.clone())
+            compile_math_binary(&mut env, op.to_str(), data1.clone(), *prep, data2.clone())
         }
         parse::MathKind::ModMath(op, data1, prep, data2) => {
-            (op.to_str(), data1.clone(), *prep, data2.clone())
+            compile_math_binary(&mut env, op.to_str(), data1.clone(), *prep, data2.clone())
         }
-    };
+        parse::MathKind::ArithUnaryMath(data) => {
+            let a = compile_dataorqi2(&mut env, data);
+            env.ans_counter += 1;
+            let r = vec![format!(
+                "{}let _ans{} = !{};\n",
+                "    ".repeat(env.indent_level),
+                env.ans_counter,
+                a,
+            )];
+            env.variables_not_yet_named
+                .push(format!("_ans{}", env.ans_counter));
 
+            return r;
+        }
+    }
+}
+
+fn compile_math_binary(
+    mut env: &mut Env,
+    opstr: &str,
+    data1: parse::DataOrQi2,
+    prep: lex::Preposition,
+    data2: parse::DataOrQi2,
+) -> Vec<String> {
     let left = compile_dataorqi2(
         &mut env,
         match prep {
