@@ -91,15 +91,15 @@ impl IdentBiMap {
 
     fn insert_ifexpr(
         &mut self,
-        ifexpr: &parse::IfExpression,
+        ifexpr: &parse::IfCond,
         conversion_table: &HashMap<String, String>,
     ) {
         match ifexpr {
-            parse::IfExpression::Binary(data1, _, data2) => {
+            parse::IfCond::Binary(data1, _, data2) => {
                 self.insert_data_or_qi2(data1, &conversion_table);
                 self.insert_data_or_qi2(data2, &conversion_table);
             }
-            parse::IfExpression::Unary(data) => {
+            parse::IfCond::Unary(data) => {
                 self.insert_data_or_qi2(data, &conversion_table);
             }
         }

@@ -100,6 +100,9 @@ pub enum Lex {
     /// 變
     Bian4Change,
 
+    /// 若其然者; not found in spec.html
+    Ruo4Qi2Ran2Zhe3,
+
     ArithBinaryOp(ArithBinaryOp),
     LogicBinaryOp(LogicBinaryOp),
     IfLogicOp(IfLogicOp),
@@ -530,6 +533,16 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
                 _ => Lex::Preposition(Preposition::Yi3),
             },
             '若' => match iter.peek() {
+                Some('其') => {
+                    match iter.peek_nth(1) {
+                        Some('然') => {
+                            iter.next();
+                            iter.next();
+                            get_keyword(&mut iter, &['然', '者'], Lex::Ruo4Qi2Ran2Zhe3)?
+                        }
+                        _ => Lex::Ruo4,
+                    }
+                }
                 Some('非') => {
                     iter.next();
                     Lex::Ruo4Fei1

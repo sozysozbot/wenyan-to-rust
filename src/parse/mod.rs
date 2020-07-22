@@ -1,6 +1,6 @@
 use crate::lex;
 type LexIter<'a> = peek_nth::PeekableNth<std::slice::Iter<'a, lex::Lex>>;
-pub type CondPlusStatements = (IfExpression, Vec<Statement>);
+pub type CondPlusStatements = (IfCond, Vec<Statement>);
 
 #[derive(Debug)]
 pub enum Statement {
@@ -54,7 +54,7 @@ pub enum Statement {
 }
 
 #[derive(Debug, Clone)]
-pub enum IfExpression {
+pub enum IfCond {
     Unary(DataOrQi2),
     Binary(DataOrQi2, lex::IfLogicOp, DataOrQi2),
 }
@@ -431,7 +431,7 @@ fn parse_if_statement_after_zhe3(
     }
 }
 
-fn parse_ifexpression_plus_zhe3(mut iter: &mut LexIter<'_>) -> Result<IfExpression, Error> {
+fn parse_ifexpression_plus_zhe3(mut iter: &mut LexIter<'_>) -> Result<IfCond, Error> {
     // if_expression               : unary_if_expression|binary_if_expression ;
     // unary_if_expression         : data|(IDENTIFIER '之'('長'|STRING_LITERAL|IDENTIFIER))|'其' ;
     // binary_if_expression        : unary_if_expression IF_LOGIC_OP unary_if_expression ;
@@ -439,14 +439,14 @@ fn parse_ifexpression_plus_zhe3(mut iter: &mut LexIter<'_>) -> Result<IfExpressi
     match iter.peek() {
         Some(lex::Lex::Zhe3) => {
             iter.next();
-            return Ok(IfExpression::Unary(data));
+            return Ok(IfCond::Unary(data));
         }
         Some(lex::Lex::IfLogicOp(op)) => {
             iter.next();
             let data2 = parse_data_or_qi2(&mut iter)?; // FIXME: the possibility of `(IDENTIFIER '之'('長'|STRING_LITERAL|IDENTIFIER))` is ignored
             match iter.next().ok_or(Error::UnexpectedEOF)? {
                 lex::Lex::Zhe3 => {
-                    return Ok(IfExpression::Binary(data, *op, data2));
+                    return Ok(IfCond::Binary(data, *op, data2));
                 }
                 _ => return Err(Error::SomethingWentWrong),
             }
@@ -458,6 +458,14 @@ fn parse_ifexpression_plus_zhe3(mut iter: &mut LexIter<'_>) -> Result<IfExpressi
 fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
     let token = iter.next().ok_or(Error::UnexpectedEOF)?;
     match token {
+        lex::Lex::Ruo4Qi2Ran2Zhe3 => {
+            let (ifcase, elseifcases, elsecase) = parse_if_statement_after_zhe3(&mut iter)?;
+            return Ok(Statement::If {
+                ifcase: (IfCond::Unary(DataOrQi2::Qi2), ifcase),
+                elseifcases,
+                elsecase,
+            });
+        }
         lex::Lex::Ruo4 => {
             // if_statement                : '若' if_expression '者' statement+ ('或若' if_expression '者' statement+)* ('若非' statement+)? FOR_IF_END ;
             let ifexpr = parse_ifexpression_plus_zhe3(&mut iter)?;

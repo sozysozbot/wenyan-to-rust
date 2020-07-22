@@ -348,9 +348,9 @@ fn compile_name_multi_statement(mut env: &mut Env, idents: &[parse::Identifier])
     res
 }
 
-fn compile_ifcond(mut env: &mut Env, ifcond: &parse::IfExpression, keyword: &str) -> String {
+fn compile_ifcond(mut env: &mut Env, ifcond: &parse::IfCond, keyword: &str) -> String {
     match ifcond {
-        parse::IfExpression::Binary(data1, op, data2) => format!(
+        parse::IfCond::Binary(data1, op, data2) => format!(
             "{}{} {} {} {} {{\n",
             "    ".repeat(env.indent_level),
             keyword,
@@ -358,7 +358,7 @@ fn compile_ifcond(mut env: &mut Env, ifcond: &parse::IfExpression, keyword: &str
             op.to_str(),
             compile_dataorqi2(&mut env, data2),
         ),
-        parse::IfExpression::Unary(data1) => format!(
+        parse::IfCond::Unary(data1) => format!(
             "{}{} {} {{\n",
             "    ".repeat(env.indent_level),
             keyword,
