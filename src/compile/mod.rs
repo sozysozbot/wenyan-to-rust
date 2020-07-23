@@ -516,17 +516,11 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             r
         }
         parse::Statement::Print => {
-            let mut r = format!(
-                "println!(\"{}\"",
+            let r = format!(
+                "println!(\"{}\"{});",
                 "{} ".repeat(env.variables_not_yet_named.len()).trim_end(),
+                env.variables_not_yet_named.iter().map(|varname| format!(", {}", varname)).collect::<Vec<_>>().join("")
             );
-
-            for varname in &env.variables_not_yet_named {
-                r.push_str(", ");
-                r.push_str(varname);
-            }
-
-            r.push_str(");");
             env.variables_not_yet_named = vec![];
             return vec![(env.indent_level, r)];
         }

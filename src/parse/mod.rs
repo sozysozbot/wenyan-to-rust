@@ -474,16 +474,14 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
                     if let lex::Lex::Identifier(elem) = iter.next().ok_or(Error::UnexpectedEOF)? {
                         let mut stmts = vec![];
                         loop {
-                            match iter.peek().ok_or(Error::SomethingWentWrong)? {
-                                lex::Lex::Yun2Yun2OrYe3(_) => {
+                            if let lex::Lex::Yun2Yun2OrYe3(_) = iter.peek().ok_or(Error::SomethingWentWrong)? {
                                     iter.next();
                                     return Ok(Statement::ForArr {
                                         list: Identifier(list.to_string()),
                                         elem: Identifier(elem.to_string()),
                                         stmts,
                                     });
-                                }
-                                _ => {}
+                                
                             }
                             stmts.push(parse_statement(&mut iter)?);
                         }
