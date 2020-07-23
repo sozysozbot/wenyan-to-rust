@@ -138,12 +138,18 @@ impl IdentBiMap {
                 self.insert_ident(elem.clone(), &conversion_table);
                 self.insert_stmts(&stmts, &conversion_table)
             }
+            parse::Statement::ArrayCat { append_to, elems } => {
+                self.insert_data_or_qi2(&parse::DataOrQi2::from(append_to), &conversion_table);
+                for ident in elems {
+                    self.insert_ident(ident.clone(), &conversion_table)
+                }
+            }
             parse::Statement::ArrayFill {
                 what_to_fill,
                 elems,
             } => {
-                self.insert_data_or_qi2(&what_to_fill, &conversion_table);
-                if let parse::DataOrQi2::Data(parse::Data::Identifier(ident)) = what_to_fill {
+                self.insert_data_or_qi2(&parse::DataOrQi2::from(what_to_fill), &conversion_table);
+                if let parse::IdentOrQi2::Ident(ident) = what_to_fill {
                     self.mutable_idents.insert(ident.clone());
                 }
                 for e in elems {

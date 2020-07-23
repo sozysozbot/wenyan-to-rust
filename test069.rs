@@ -1,0 +1,13 @@
+fn main() {
+    let mut JIA3 = vec![];
+    JIA3.push(3.0);
+    JIA3.push(5.0);
+    let mut YI3 = vec![];
+    YI3.append(&mut vec![2.0, 9.0, 4.0, 22.0]);
+    let mut DING1 = vec![];
+    DING1.push(9.0);
+    let _ans1 = [&JIA3[..], &YI3[..]].concat();
+    let BING3 = _ans1;
+    let _ans2 = [&JIA3[..], &YI3[..], &BING3[..], &DING1[..]].concat();
+    let WU4 = _ans2;
+}

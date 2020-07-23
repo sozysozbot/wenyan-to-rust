@@ -417,10 +417,30 @@ fn compile_if(
 
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
     match st {
+        parse::Statement::ArrayCat {
+            append_to: parse::IdentOrQi2::Ident(ident),
+            elems,
+        } => {
+            env.ans_counter += 1;
+            env.variables_not_yet_named
+            .push(format!("_ans{}", env.ans_counter));
+            vec![(
+            env.indent_level,
+            format!(
+                "let _ans{} = [&{}[..], {}].concat();",
+                env.ans_counter,
+                env.ident_map.translate_from_hanzi(&ident),
+                elems
+                    .iter()
+                    .map(|e| format!("&{}[..]", env.ident_map.translate_from_hanzi(&e)))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+        )]},
         parse::Statement::Continue => vec![(env.indent_level, "continue;".to_string())],
         parse::Statement::Break => vec![(env.indent_level, "break;".to_string())],
         parse::Statement::ArrayFill {
-            what_to_fill: parse::DataOrQi2::Data(parse::Data::Identifier(ident)),
+            what_to_fill: parse::IdentOrQi2::Ident(ident),
             elems,
         } => vec![(
             env.indent_level,
@@ -443,12 +463,12 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             },
         )],
         parse::Statement::ArrayFill {
-            what_to_fill: parse::DataOrQi2::Data(_),
+            what_to_fill: parse::IdentOrQi2::Qi2,
             elems: _,
-        } => panic!("充 must be followed by an identifier or 其"),
-        parse::Statement::ArrayFill {
-            what_to_fill: parse::DataOrQi2::Qi2,
-            elems,
+        }
+        | parse::Statement::ArrayCat {
+            append_to: parse::IdentOrQi2::Qi2,
+            elems: _,
         } => unimplemented!("filling qi2"),
         parse::Statement::If {
             ifcase,

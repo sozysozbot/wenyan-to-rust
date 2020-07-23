@@ -133,6 +133,8 @@ pub enum Lex {
     /// 乃止是遍
     Nai3Zhi3Shi4Bian4,
 
+    /// 銜
+    Xian2,
     ArithBinaryOp(ArithBinaryOp),
     LogicBinaryOp(LogicBinaryOp),
     IfLogicOp(IfLogicOp),
@@ -486,6 +488,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
         }
 
         ans.push(match c {
+            '銜' => Lex::Xian2,
             '凡' => Lex::Fan2,
             '充' => Lex::Chong1,
             '變' => Lex::Bian4Change,
