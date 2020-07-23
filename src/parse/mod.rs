@@ -56,7 +56,7 @@ pub enum Statement {
         elems: Vec<Data>,
     },
     Flush,
-    // Break,
+    Break,
     // Comment,
     /// not found in the spec, but since `名之曰「戊」` is compiled to `var WU4 = undefined;`, we need this
     NameMulti {
@@ -468,20 +468,22 @@ fn parse_ifexpression_plus_zhe3(mut iter: &mut LexIter<'_>) -> Result<IfCond, Er
 
 fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
     match iter.next().ok_or(Error::UnexpectedEOF)? {
+        lex::Lex::Nai3Zhi3 => Ok(Statement::Break),
         lex::Lex::Fan2 => {
             if let lex::Lex::Identifier(list) = iter.next().ok_or(Error::UnexpectedEOF)? {
                 if let lex::Lex::Zhong1Zhi1 = iter.next().ok_or(Error::UnexpectedEOF)? {
                     if let lex::Lex::Identifier(elem) = iter.next().ok_or(Error::UnexpectedEOF)? {
                         let mut stmts = vec![];
                         loop {
-                            if let lex::Lex::Yun2Yun2OrYe3(_) = iter.peek().ok_or(Error::SomethingWentWrong)? {
-                                    iter.next();
-                                    return Ok(Statement::ForArr {
-                                        list: Identifier(list.to_string()),
-                                        elem: Identifier(elem.to_string()),
-                                        stmts,
-                                    });
-                                
+                            if let lex::Lex::Yun2Yun2OrYe3(_) =
+                                iter.peek().ok_or(Error::SomethingWentWrong)?
+                            {
+                                iter.next();
+                                return Ok(Statement::ForArr {
+                                    list: Identifier(list.to_string()),
+                                    elem: Identifier(elem.to_string()),
+                                    stmts,
+                                });
                             }
                             stmts.push(parse_statement(&mut iter)?);
                         }

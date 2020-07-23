@@ -417,6 +417,7 @@ fn compile_if(
 
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
     match st {
+        parse::Statement::Break => vec![(env.indent_level, "break;".to_string())],
         parse::Statement::ArrayFill {
             what_to_fill: parse::DataOrQi2::Data(parse::Data::Identifier(ident)),
             elems,
@@ -519,7 +520,11 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             let r = format!(
                 "println!(\"{}\"{});",
                 "{} ".repeat(env.variables_not_yet_named.len()).trim_end(),
-                env.variables_not_yet_named.iter().map(|varname| format!(", {}", varname)).collect::<Vec<_>>().join("")
+                env.variables_not_yet_named
+                    .iter()
+                    .map(|varname| format!(", {}", varname))
+                    .collect::<Vec<_>>()
+                    .join("")
             );
             env.variables_not_yet_named = vec![];
             return vec![(env.indent_level, r)];

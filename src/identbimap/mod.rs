@@ -186,7 +186,7 @@ impl IdentBiMap {
                 self.mutable_idents.insert(ident.clone());
                 self.insert_data_or_qi2(data, &conversion_table);
             }
-            parse::Statement::Print | parse::Statement::Flush => {}
+            parse::Statement::Print | parse::Statement::Flush | parse::Statement::Break => {}
             parse::Statement::ForEnum { statements, num: _ }
             | parse::Statement::Loop { statements } => {
                 self.insert_stmts(&statements, &conversion_table)
