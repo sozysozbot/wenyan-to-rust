@@ -79,7 +79,7 @@ fn compile_literal(env: &Env, v: &parse::Data) -> String {
 /// `idents` fills the open spots,
 /// and remaining spots (if any) will be accessible by 書之 .
 fn compile_define(
-    env: &mut Env,
+    mut env: &mut Env,
     decl: &parse::DeclareStatement,
     idents: &[parse::Identifier],
 ) -> Vec<Line> {
@@ -94,17 +94,14 @@ fn compile_define(
         match idents.get(i) {
             None => {
                 // no more ident; ans_counter and variables_not_yet_named come into play
-                env.ans_counter += 1;
                 ans.push((
                     env.indent_level,
                     format!(
                         "let _ans{} = {};",
-                        env.ans_counter,
+                        get_new_unnamed_var(&mut env),
                         compile_optional_literal(&env, data_arr.get(i), *type_)
                     ),
                 ));
-                env.variables_not_yet_named
-                    .push(format!("_ans{}", env.ans_counter));
             }
             Some(ident) => {
                 ans.push((
@@ -233,13 +230,10 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind) -> Vec<Line> {
         }
         parse::MathKind::ArithUnaryMath(data) => {
             let a = compile_dataorqi2(&mut env, data);
-            env.ans_counter += 1;
             let r = vec![(
                 env.indent_level,
-                format!("let _ans{} = !{};", env.ans_counter, a,),
+                format!("let _ans{} = !{};", get_new_unnamed_var(&mut env), a,),
             )];
-            env.variables_not_yet_named
-                .push(format!("_ans{}", env.ans_counter));
 
             r
         }
@@ -269,16 +263,16 @@ fn compile_math_binary(
         },
     );
 
-    env.ans_counter += 1;
     let r = vec![(
         env.indent_level,
         format!(
             "let _ans{} = {} {} {};",
-            env.ans_counter, left, opstr, right,
+            get_new_unnamed_var(&mut env),
+            left,
+            opstr,
+            right,
         ),
     )];
-    env.variables_not_yet_named
-        .push(format!("_ans{}", env.ans_counter));
 
     r
 }
@@ -415,20 +409,23 @@ fn compile_if(
     r
 }
 
+fn get_new_unnamed_var(mut env: &mut Env) -> usize {
+    env.ans_counter += 1;
+    env.variables_not_yet_named
+        .push(format!("_ans{}", env.ans_counter));
+    env.ans_counter
+}
+
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
     match st {
         parse::Statement::ArrayCat {
             append_to: parse::IdentOrQi2::Ident(ident),
             elems,
-        } => {
-            env.ans_counter += 1;
-            env.variables_not_yet_named
-            .push(format!("_ans{}", env.ans_counter));
-            vec![(
+        } => vec![(
             env.indent_level,
             format!(
                 "let _ans{} = [&{}[..], {}].concat();",
-                env.ans_counter,
+                get_new_unnamed_var(&mut env),
                 env.ident_map.translate_from_hanzi(&ident),
                 elems
                     .iter()
@@ -436,7 +433,7 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
                     .collect::<Vec<_>>()
                     .join(", ")
             ),
-        )]},
+        )],
         parse::Statement::Continue => vec![(env.indent_level, "continue;".to_string())],
         parse::Statement::Break => vec![(env.indent_level, "break;".to_string())],
         parse::Statement::ArrayFill {
@@ -477,47 +474,37 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
         } => compile_if(&mut env, ifcase, elseifcases, elsecase),
         parse::Statement::Reference { data, ident: None } => {
             /* not named */
-            env.ans_counter += 1;
-            let r = vec![(
+            vec![(
                 env.indent_level,
                 format!(
                     "let _ans{} = {};",
-                    env.ans_counter,
+                    get_new_unnamed_var(&mut env),
                     compile_literal(&env, data)
                 ),
-            )];
-
-            env.variables_not_yet_named
-                .push(format!("_ans{}", env.ans_counter));
-
-            r
+            )]
         }
         parse::Statement::Reference {
             data,
             ident: Some(ident),
-        } => {
-            env.ans_counter += 1;
-            let r = vec![
-                (
-                    env.indent_level,
-                    format!(
-                        "let _ans{} = {};",
-                        env.ans_counter,
-                        compile_literal(&env, data),
-                    ),
+        } => vec![
+            (
+                env.indent_level,
+                format!(
+                    "let _ans{} = {};",
+                    get_new_unnamed_var(&mut env),
+                    compile_literal(&env, data),
                 ),
-                (
-                    env.indent_level,
-                    format!(
-                        "let {}{} = _ans{};",
-                        ifmutable_thenmut(&env, &ident),
-                        env.ident_map.translate_from_hanzi(&ident),
-                        env.ans_counter,
-                    ),
+            ),
+            (
+                env.indent_level,
+                format!(
+                    "let {}{} = _ans{};",
+                    ifmutable_thenmut(&env, &ident),
+                    env.ident_map.translate_from_hanzi(&ident),
+                    env.ans_counter,
                 ),
-            ];
-            r
-        }
+            ),
+        ],
         parse::Statement::NameMulti { idents } => compile_name_multi_statement(&mut env, &idents),
         parse::Statement::Flush => {
             env.variables_not_yet_named = vec![];
@@ -531,17 +518,14 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
         }) => {
             let mut r = vec![];
             for i in 0..*how_many_variables {
-                env.ans_counter += 1;
                 r.push((
                     env.indent_level,
                     format!(
                         "let _ans{} = {};",
-                        env.ans_counter,
+                        get_new_unnamed_var(&mut env),
                         compile_optional_literal(&env, data_arr.get(i), *type_)
                     ),
                 ));
-                env.variables_not_yet_named
-                    .push(format!("_ans{}", env.ans_counter));
             }
             r
         }
