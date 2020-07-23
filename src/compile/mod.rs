@@ -424,15 +424,23 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             elems,
         } => vec![(
             env.indent_level,
-            format!(
-                "{}.append(&mut vec![{}]);",
-                env.ident_map.translate_from_hanzi(&ident),
-                elems
-                    .iter()
-                    .map(|e| compile_literal(&env, e))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
+            if let [e] = elems.as_slice() {
+                format!(
+                    "{}.push({});",
+                    env.ident_map.translate_from_hanzi(&ident),
+                    compile_literal(&env, e)
+                )
+            } else {
+                format!(
+                    "{}.append(&mut vec![{}]);",
+                    env.ident_map.translate_from_hanzi(&ident),
+                    elems
+                        .iter()
+                        .map(|e| compile_literal(&env, e))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            },
         )],
         parse::Statement::ArrayFill {
             what_to_fill: parse::DataOrQi2::Data(_),
