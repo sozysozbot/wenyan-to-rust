@@ -130,6 +130,9 @@ pub enum Lex {
     /// 乃得矣
     Nai3De2Yi3,
 
+    /// 乃止是遍
+    Nai3Zhi3Shi4Bian4,
+
     ArithBinaryOp(ArithBinaryOp),
     LogicBinaryOp(LogicBinaryOp),
     IfLogicOp(IfLogicOp),
@@ -645,7 +648,19 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
                 a => return Err(Error::UnexpectedCharAfter('是', a)),
             },
             '乃' => match iter.next().ok_or(Error::UnexpectedEOFAfter('乃'))? {
-                '止' => Lex::Nai3Zhi3,
+                '止' => match iter.peek() {
+                    Some('是') => match iter.peek_nth(1) {
+                        // possibly 乃止 + (是矣, 是術曰, 是謂)
+                        Some('遍') => {
+                            iter.next(); // 是
+                            iter.next(); // 遍
+                            Lex::Nai3Zhi3Shi4Bian4
+                        }
+                        _ => Lex::Nai3Zhi3,
+                    },
+                    _ => Lex::Nai3Zhi3,
+                },
+
                 '行' => get_keyword(
                     &mut iter,
                     &['行', '是', '術', '曰'],

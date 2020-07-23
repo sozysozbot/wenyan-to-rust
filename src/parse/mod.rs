@@ -299,6 +299,14 @@ fn parse_for_enum_statement_after_wei2shi4(mut iter: &mut LexIter<'_>) -> Result
     }
 }
 
+fn parse_identifier(iter: &mut LexIter<'_>) -> Result<Identifier, Error> {
+    if let lex::Lex::Identifier(ident) = iter.next().ok_or(Error::UnexpectedEOF)? {
+        Ok(Identifier(ident.to_string()))
+    } else {
+        Err(Error::SomethingWentWrong)
+    }
+}
+
 fn parse_assign_after_xi1zhi1(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
     // '昔之' IDENTIFIER
     // (
@@ -313,31 +321,22 @@ fn parse_assign_after_xi1zhi1(mut iter: &mut LexIter<'_>) -> Result<Statement, E
     //     ) |
     //     '今不復存矣'
     // ) ;
-
-    if let lex::Lex::Identifier(ident) = iter.next().ok_or(Error::UnexpectedEOF)? {
-        match iter.next().ok_or(Error::UnexpectedEOF)? {
-            lex::Lex::Zhi1 => {
-                unimplemented!("昔之 IDENTIFIER 之 (INT_NUM|STRING_LITERAL|IDENTIFIER)")
-            }
-            lex::Lex::Zhe3 => match iter.next().ok_or(Error::UnexpectedEOF)? {
-                lex::Lex::Jin1Bu4Fu4Cun2Yi3 => unimplemented!("昔之 ... 者今不復存矣"),
-                lex::Lex::Jin1 => {
-                    let data = parse_data_or_qi2(&mut iter)?;
-                    match iter.next().ok_or(Error::UnexpectedEOF)? {
-                        lex::Lex::Zhi1 => unimplemented!("昔之 ... 者今data之INT_NUM是矣"),
-                        lex::Lex::Shi4Yi3 => Ok(Statement::Assign {
-                            ident: Identifier(ident.clone()),
-                            data,
-                        }),
-                        _ => Err(Error::SomethingWentWrong),
-                    }
+    let ident = parse_identifier(&mut iter)?;
+    match iter.next().ok_or(Error::UnexpectedEOF)? {
+        lex::Lex::Zhi1 => unimplemented!("昔之 IDENTIFIER 之 (INT_NUM|STRING_LITERAL|IDENTIFIER)"),
+        lex::Lex::Zhe3 => match iter.next().ok_or(Error::UnexpectedEOF)? {
+            lex::Lex::Jin1Bu4Fu4Cun2Yi3 => unimplemented!("昔之 ... 者今不復存矣"),
+            lex::Lex::Jin1 => {
+                let data = parse_data_or_qi2(&mut iter)?;
+                match iter.next().ok_or(Error::UnexpectedEOF)? {
+                    lex::Lex::Zhi1 => unimplemented!("昔之 ... 者今data之INT_NUM是矣"),
+                    lex::Lex::Shi4Yi3 => Ok(Statement::Assign { ident, data }),
+                    _ => Err(Error::SomethingWentWrong),
                 }
-                _ => Err(Error::SomethingWentWrong),
-            },
+            }
             _ => Err(Error::SomethingWentWrong),
-        }
-    } else {
-        Err(Error::SomethingWentWrong)
+        },
+        _ => Err(Error::SomethingWentWrong),
     }
 }
 
@@ -349,14 +348,10 @@ fn parse_reference_statement_after_fu2(mut iter: &mut LexIter<'_>) -> Result<Sta
         Some(lex::Lex::Ming2Zhi1) => {
             iter.next();
             if let lex::Lex::Yue1 = iter.next().ok_or(Error::UnexpectedEOF)? {
-                if let lex::Lex::Identifier(ident) = iter.next().ok_or(Error::UnexpectedEOF)? {
-                    Ok(Statement::Reference {
-                        data,
-                        ident: Some(Identifier(ident.to_string())),
-                    })
-                } else {
-                    Err(Error::SomethingWentWrong)
-                }
+                Ok(Statement::Reference {
+                    data,
+                    ident: Some(parse_identifier(&mut iter)?),
+                })
             } else {
                 Err(Error::SomethingWentWrong)
             }
@@ -470,28 +465,18 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
     match iter.next().ok_or(Error::UnexpectedEOF)? {
         lex::Lex::Nai3Zhi3 => Ok(Statement::Break),
         lex::Lex::Fan2 => {
-            if let lex::Lex::Identifier(list) = iter.next().ok_or(Error::UnexpectedEOF)? {
-                if let lex::Lex::Zhong1Zhi1 = iter.next().ok_or(Error::UnexpectedEOF)? {
-                    if let lex::Lex::Identifier(elem) = iter.next().ok_or(Error::UnexpectedEOF)? {
-                        let mut stmts = vec![];
-                        loop {
-                            if let lex::Lex::Yun2Yun2OrYe3(_) =
-                                iter.peek().ok_or(Error::SomethingWentWrong)?
-                            {
-                                iter.next();
-                                return Ok(Statement::ForArr {
-                                    list: Identifier(list.to_string()),
-                                    elem: Identifier(elem.to_string()),
-                                    stmts,
-                                });
-                            }
-                            stmts.push(parse_statement(&mut iter)?);
-                        }
-                    } else {
-                        Err(Error::SomethingWentWrong)
+            let list = parse_identifier(&mut iter)?;
+            if let lex::Lex::Zhong1Zhi1 = iter.next().ok_or(Error::UnexpectedEOF)? {
+                let elem = parse_identifier(&mut iter)?;
+                let mut stmts = vec![];
+                loop {
+                    if let lex::Lex::Yun2Yun2OrYe3(_) =
+                        iter.peek().ok_or(Error::SomethingWentWrong)?
+                    {
+                        iter.next();
+                        return Ok(Statement::ForArr { list, elem, stmts });
                     }
-                } else {
-                    Err(Error::SomethingWentWrong)
+                    stmts.push(parse_statement(&mut iter)?);
                 }
             } else {
                 Err(Error::SomethingWentWrong)
@@ -680,7 +665,7 @@ fn parse_after_wu2you3(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
 }
 
 fn parse_name_multi_statement_after_ming2zhi1(
-    iter: &mut LexIter<'_>,
+    mut iter: &mut LexIter<'_>,
 ) -> Result<Vec<Identifier>, Error> {
     // ('曰' IDENTIFIER)+
 
@@ -688,11 +673,7 @@ fn parse_name_multi_statement_after_ming2zhi1(
 
     while let Some(lex::Lex::Yue1) = iter.peek() {
         iter.next();
-        if let lex::Lex::Identifier(ident) = iter.next().ok_or(Error::UnexpectedEOF)? {
-            idents.push(Identifier(ident.clone()));
-        } else {
-            return Err(Error::SomethingWentWrong);
-        }
+        idents.push(parse_identifier(&mut iter)?);
     }
 
     if idents.is_empty() {
