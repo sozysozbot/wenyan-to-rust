@@ -515,20 +515,18 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             how_many_variables,
             type_,
             data_arr,
-        }) => {
-            let mut r = vec![];
-            for i in 0..*how_many_variables {
-                r.push((
+        }) => (0..*how_many_variables)
+            .map(|i| {
+                (
                     env.indent_level,
                     format!(
                         "let _ans{} = {};",
                         get_new_unnamed_var(&mut env),
                         compile_optional_literal(&env, data_arr.get(i), *type_)
                     ),
-                ));
-            }
-            r
-        }
+                )
+            })
+            .collect(),
         parse::Statement::Print => {
             let r = format!(
                 "println!(\"{}\"{});",
@@ -542,28 +540,23 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             env.variables_not_yet_named = vec![];
             return vec![(env.indent_level, r)];
         }
-        parse::Statement::Assign { ident, data } => {
-            return vec![(
-                env.indent_level,
-                format!(
-                    "{} = {};",
-                    env.ident_map.translate_from_hanzi(&ident),
-                    compile_dataorqi2(&mut env, data)
-                ),
-            )]
-        }
-        parse::Statement::InitDefine { type_, data, name } => {
-            let r = vec![(
-                env.indent_level,
-                format!(
-                    "let {}{} = {};",
-                    ifmutable_thenmut(&env, &name),
-                    env.ident_map.translate_from_hanzi(&name),
-                    compile_optional_literal(&env, Some(data), *type_)
-                ),
-            )];
-            r
-        }
+        parse::Statement::Assign { ident, data } => vec![(
+            env.indent_level,
+            format!(
+                "{} = {};",
+                env.ident_map.translate_from_hanzi(&ident),
+                compile_dataorqi2(&mut env, data)
+            ),
+        )],
+        parse::Statement::InitDefine { type_, data, name } => vec![(
+            env.indent_level,
+            format!(
+                "let {}{} = {};",
+                ifmutable_thenmut(&env, &name),
+                env.ident_map.translate_from_hanzi(&name),
+                compile_optional_literal(&env, Some(data), *type_)
+            ),
+        )],
         parse::Statement::Define { decl, idents } => compile_define(&mut env, decl, &idents),
         parse::Statement::ForEnum { num, statements } => compile_forenum(&env, *num, &statements),
         parse::Statement::ForEnumIdent { ident, statements } => {
