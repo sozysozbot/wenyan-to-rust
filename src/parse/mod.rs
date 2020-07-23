@@ -460,6 +460,28 @@ fn parse_ifexpression_plus_zhe3(mut iter: &mut LexIter<'_>) -> Result<IfCond, Er
         _ => Err(Error::SomethingWentWrong),
     }
 }
+///```
+///array_push_statement        : '充' (IDENTIFIER|'其') (PREPOSITION_RIGHT data)+ name_single_statement?;
+///```
+fn parse_arraypush_after_chong1(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
+    let what_to_fill = parse_data_or_qi2(&mut iter)?;
+    if let lex::Lex::Preposition(lex::Preposition::Yi3) = iter.next().ok_or(Error::UnexpectedEOF)? {
+        let mut elems = vec![parse_data(&mut iter)?];
+        while let Some(lex::Lex::Preposition(lex::Preposition::Yi3)) = iter.peek() {
+            iter.next();
+            elems.push(parse_data(&mut iter)?);
+        }
+        match iter.peek() {
+            Some(lex::Lex::Ming2Zhi1) => unimplemented!("ming2zhi1 after array"), // remaining: name_single_statement?
+            _ => Ok(Statement::ArrayFill {
+                what_to_fill,
+                elems,
+            }),
+        }
+    } else {
+        Err(Error::SomethingWentWrong)
+    }
+}
 
 fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
     match iter.next().ok_or(Error::UnexpectedEOF)? {
@@ -482,28 +504,7 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
                 Err(Error::SomethingWentWrong)
             }
         }
-        lex::Lex::Chong1 => {
-            // array_push_statement        : '充' (IDENTIFIER|'其') (PREPOSITION_RIGHT data)+ name_single_statement?;
-            let what_to_fill = parse_data_or_qi2(&mut iter)?;
-            if let lex::Lex::Preposition(lex::Preposition::Yi3) =
-                iter.next().ok_or(Error::UnexpectedEOF)?
-            {
-                let mut elems = vec![parse_data(&mut iter)?];
-                while let Some(lex::Lex::Preposition(lex::Preposition::Yi3)) = iter.peek() {
-                    iter.next();
-                    elems.push(parse_data(&mut iter)?);
-                }
-                match iter.peek() {
-                    Some(lex::Lex::Ming2Zhi1) => unimplemented!("ming2zhi1 after array"), // remaining: name_single_statement?
-                    _ => Ok(Statement::ArrayFill {
-                        what_to_fill,
-                        elems,
-                    }),
-                }
-            } else {
-                Err(Error::SomethingWentWrong)
-            }
-        }
+        lex::Lex::Chong1 => parse_arraypush_after_chong1(&mut iter),
         lex::Lex::Ruo4Qi2Bu4Ran2Zhe3 => {
             let (ifstmts, elseifcases, elsecase) = parse_if_statement_after_zhe3(&mut iter)?;
             Ok(Statement::If {
@@ -547,10 +548,9 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
                 }),
             }
         }
-        lex::Lex::Ming2Zhi1 => {
-            let idents = parse_name_multi_statement_after_ming2zhi1(&mut iter)?;
-            Ok(Statement::NameMulti { idents })
-        }
+        lex::Lex::Ming2Zhi1 => Ok(Statement::NameMulti {
+            idents: parse_name_multi_statement_after_ming2zhi1(&mut iter)?,
+        }),
         lex::Lex::Yi1Flush => Ok(Statement::Flush),
         lex::Lex::ArithBinaryOp(op) => {
             let data1 = parse_data_or_qi2(&mut iter)?;
