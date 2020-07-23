@@ -417,6 +417,7 @@ fn compile_if(
 
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
     match st {
+        parse::Statement::Continue => vec![(env.indent_level, "continue;".to_string())],
         parse::Statement::Break => vec![(env.indent_level, "break;".to_string())],
         parse::Statement::ArrayFill {
             what_to_fill: parse::DataOrQi2::Data(parse::Data::Identifier(ident)),

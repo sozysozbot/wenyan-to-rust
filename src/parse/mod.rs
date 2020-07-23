@@ -57,6 +57,10 @@ pub enum Statement {
     },
     Flush,
     Break,
+
+    /// not found in the spec
+    Continue,
+
     // Comment,
     /// not found in the spec, but since `名之曰「戊」` is compiled to `var WU4 = undefined;`, we need this
     NameMulti {
@@ -485,6 +489,7 @@ fn parse_arraypush_after_chong1(mut iter: &mut LexIter<'_>) -> Result<Statement,
 
 fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
     match iter.next().ok_or(Error::UnexpectedEOF)? {
+        lex::Lex::Nai3Zhi3Shi4Bian4 => Ok(Statement::Continue),
         lex::Lex::Nai3Zhi3 => Ok(Statement::Break),
         lex::Lex::Fan2 => {
             let list = parse_identifier(&mut iter)?;
