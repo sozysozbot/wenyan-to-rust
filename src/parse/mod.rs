@@ -51,6 +51,10 @@ pub enum Statement {
         data: Data,
         ident: Option<Identifier>,
     },
+    ReferenceInd {
+        data: Data,
+        index: i64
+    },
     ArrayFill {
         what_to_fill: IdentOrQi2,
         elems: Vec<Data>,
@@ -378,20 +382,26 @@ fn parse_assign_after_xi1zhi1(mut iter: &mut LexIter<'_>) -> Result<Statement, E
 
 fn parse_reference_statement_after_fu2(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
     // reference_statement         : '夫' data ('之' (STRING_LITERAL|INT_NUM|'其餘'|IDENTIFIER|'長'))? name_single_statement? ;
+    // but no need to handle name_single_statement;
+    // since 
+    // ```
+    // 加二以四。夫「丙」。名之曰「戊」曰「己」。
+    // ```
+    // compiles, it must be that name_single_statement can just as validly treated as a separate entity.
     let data = parse_data(&mut iter)?;
     match iter.peek() {
-        Some(lex::Lex::Zhi1) => unimplemented!("夫 data 之 ..."),
-        Some(lex::Lex::Ming2Zhi1) => {
+        Some(lex::Lex::Zhi1) => { // ('之' (STRING_LITERAL|INT_NUM|'其餘'|IDENTIFIER|'長'))?
             iter.next();
-            if let lex::Lex::Yue1 = iter.next().ok_or(Error::UnexpectedEOF)? {
-                Ok(Statement::Reference {
-                    data,
-                    ident: Some(parse_identifier(&mut iter)?),
-                })
-            } else {
-                Err(Error::SomethingWentWrong)
+            match iter.next().ok_or(Error::SomethingWentWrong)? {
+            
+                lex::Lex::StringLiteral(lit) => unimplemented!("夫 data 之 STRING_LITERAL"),
+                lex::Lex::IntNum(index) => Ok(Statement::ReferenceInd { data, index: interpret_intnum(&index) }),
+                lex::Lex::Qi2Yu2 => unimplemented!("夫 data 之 其餘"),
+                lex::Lex::Identifier(ident) => unimplemented!("夫 data 之 IDENTIFIER"),
+                lex::Lex::Chang2 => unimplemented!("夫 data 之長"),
+                _ => Err(Error::SomethingWentWrong)
             }
-        }
+        },
         _ => Ok(Statement::Reference { data, ident: None }),
     }
 }

@@ -505,6 +505,10 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
                 ),
             ),
         ],
+        parse::Statement::ReferenceInd {
+            data,
+            index
+        } => vec![(env.indent_level, format!("let _ans{} = {}[{} - 1];", get_new_unnamed_var(&mut env), compile_literal(&env, data),  index))],
         parse::Statement::NameMulti { idents } => compile_name_multi_statement(&mut env, &idents),
         parse::Statement::Flush => {
             env.variables_not_yet_named = vec![];

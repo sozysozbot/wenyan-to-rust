@@ -181,6 +181,9 @@ impl IdentBiMap {
                     self.insert_ident(i.clone(), &conversion_table)
                 }
             }
+            parse::Statement::ReferenceInd { data, index: _ } => {
+                self.insert_dat(data, &conversion_table);
+            }
             parse::Statement::NameMulti { idents } => {
                 for id in idents {
                     self.insert_ident(id.clone(), &conversion_table);
