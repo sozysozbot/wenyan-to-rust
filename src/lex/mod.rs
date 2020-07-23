@@ -115,6 +115,21 @@ pub enum Lex {
     /// 中之
     Zhong1Zhi1,
 
+    /// 乃止
+    Nai3Zhi3,
+
+    /// 乃行是術曰
+    Nai3Xing1Shi4Shu4Yue1,
+
+    /// 乃得
+    Nai3De2,
+
+    /// 乃歸空無
+    Nai3Gui1Kong1Wu2,
+
+    /// 乃得矣
+    Nai3De2Yi3,
+
     ArithBinaryOp(ArithBinaryOp),
     LogicBinaryOp(LogicBinaryOp),
     IfLogicOp(IfLogicOp),
@@ -629,6 +644,19 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
                 '術' => get_keyword(&mut iter, &['術', '曰'], Lex::Shi4Shu4Yue1)?,
                 a => return Err(Error::UnexpectedCharAfter('是', a)),
             },
+            '乃' => match iter.next().ok_or(Error::UnexpectedEOFAfter('乃'))? {
+                '止' => Lex::Nai3Zhi3,
+                '行' => get_keyword(&mut iter, &['行', '是', '術', '曰'], Lex::Nai3Xing1Shi4Shu4Yue1)?,
+                '歸' => get_keyword(&mut iter, &['歸', '空', '無'], Lex::Nai3Gui1Kong1Wu2)?,
+                '得' => match iter.peek() {
+                    Some('矣') => {
+                        iter.next();
+                        Lex::Nai3De2Yi3
+                    }
+                    _ => Lex::Nai3De2
+                }
+                a => return Err(Error::UnexpectedCharAfter('乃', a)),
+            }
             '零' | '一' | '二' | '三' | '四' | '五' | '六' | '七' | '八' | '九' | '十' | '百'
             | '千' | '萬' | '億' | '兆' | '京' | '垓' | '秭' | '穣' | '溝' | '澗' | '正' | '載'
             | '極' => lex_int_num(c, &mut iter)?,
