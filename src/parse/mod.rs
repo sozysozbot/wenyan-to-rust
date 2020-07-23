@@ -263,7 +263,7 @@ fn parse_for_enum_statement_after_wei2shi4(mut iter: &mut LexIter<'_>) -> Result
             lex::Lex::Bian4Loop => {
                 let mut inner = vec![];
                 loop {
-                    if iter.peek() == Some(&&lex::Lex::Yun2Yun2OrYe3) {
+                    if let Some(&&lex::Lex::Yun2Yun2OrYe3(_)) = iter.peek() {
                         iter.next();
                         break;
                     }
@@ -281,7 +281,7 @@ fn parse_for_enum_statement_after_wei2shi4(mut iter: &mut LexIter<'_>) -> Result
             lex::Lex::Bian4Loop => {
                 let mut inner = vec![];
                 loop {
-                    if iter.peek() == Some(&&lex::Lex::Yun2Yun2OrYe3) {
+                    if let Some(&&lex::Lex::Yun2Yun2OrYe3(_)) = iter.peek() {
                         iter.next();
                         break;
                     }
@@ -374,7 +374,7 @@ fn parse_elseif(mut iter: &mut LexIter<'_>) -> Result<CondPlusStatements, Error>
             match iter.peek() {
                 Some(lex::Lex::Huo4Ruo4)
                 | Some(lex::Lex::Ruo4Fei1)
-                | Some(lex::Lex::Yun2Yun2OrYe3) => return Ok((cond, stmts)),
+                | Some(lex::Lex::Yun2Yun2OrYe3(_)) => return Ok((cond, stmts)),
                 _ => {}
             }
             stmts.push(parse_statement(&mut iter)?);
@@ -388,7 +388,7 @@ fn parse_after_ruo4fei1(mut iter: &mut LexIter<'_>) -> Result<Vec<Statement>, Er
     let mut elsecase = vec![parse_statement(&mut iter)?];
     loop {
         match iter.peek() {
-            Some(lex::Lex::Yun2Yun2OrYe3) => {
+            Some(lex::Lex::Yun2Yun2OrYe3(_)) => {
                 iter.next();
                 return Ok(elsecase);
             }
@@ -413,7 +413,7 @@ fn parse_if_statement_after_zhe3(
                 let mut condstmt_vec = vec![parse_elseif(&mut iter)?];
                 loop {
                     match iter.peek() {
-                        Some(lex::Lex::Yun2Yun2OrYe3) => {
+                        Some(lex::Lex::Yun2Yun2OrYe3(_)) => {
                             iter.next();
                             return Ok((ifcase, condstmt_vec, vec![]));
                         }
@@ -431,7 +431,7 @@ fn parse_if_statement_after_zhe3(
                 iter.next();
                 return Ok((ifcase, vec![], parse_after_ruo4fei1(&mut iter)?));
             }
-            Some(lex::Lex::Yun2Yun2OrYe3) => {
+            Some(lex::Lex::Yun2Yun2OrYe3(_)) => {
                 iter.next();
                 return Ok((ifcase, vec![], vec![]));
             }
@@ -475,7 +475,7 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
                         let mut stmts = vec![];
                         loop {
                             match iter.peek().ok_or(Error::SomethingWentWrong)? {
-                                lex::Lex::Yun2Yun2OrYe3 => {
+                                lex::Lex::Yun2Yun2OrYe3(_) => {
                                     iter.next();
                                     return Ok(Statement::ForArr {
                                         list: Identifier(list.to_string()),
@@ -584,7 +584,7 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
             let mut statements = vec![];
             loop {
                 match **iter.peek().ok_or(Error::UnexpectedEOF)? {
-                    lex::Lex::Yun2Yun2OrYe3 => {
+                    lex::Lex::Yun2Yun2OrYe3(_) => {
                         iter.next();
                         return Ok(Statement::Loop { statements });
                     }

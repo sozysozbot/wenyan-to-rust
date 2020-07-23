@@ -25,7 +25,7 @@ pub enum Lex {
     Heng2Wei2Shi4,
 
     /// 云云, 也
-    Yun2Yun2OrYe3,
+    Yun2Yun2OrYe3(YYoY),
 
     /// 有
     You3,
@@ -126,6 +126,12 @@ pub enum Lex {
     IntNum(IntNum),
     FloatNumKeywords(FloatNumKeywords),
     Preposition(Preposition),
+}
+
+#[derive(Eq, PartialEq, Debug, Clone, Copy)]
+pub enum YYoY {
+    Yun2Yun2,
+    Ye3,
 }
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
@@ -465,7 +471,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
             '凡' => Lex::Fan2,
             '充' => Lex::Chong1,
             '變' => Lex::Bian4Change,
-            '也' => Lex::Yun2Yun2OrYe3,
+            '也' => Lex::Yun2Yun2OrYe3(YYoY::Ye3),
             '夫' => Lex::Fu2,
             '除' => Lex::Chu2,
             '噫' => Lex::Yi1Flush,
@@ -505,7 +511,7 @@ pub fn lex(input: &str) -> Result<Vec<Lex>, Error> {
             },
             '為' => get_keyword(&mut iter, &['為', '是'], Lex::Wei2Shi4)?,
             '昔' => get_keyword(&mut iter, &['昔', '之'], Lex::Xi1Zhi1)?,
-            '云' => get_keyword(&mut iter, &['云', '云'], Lex::Yun2Yun2OrYe3)?,
+            '云' => get_keyword(&mut iter, &['云', '云'], Lex::Yun2Yun2OrYe3(YYoY::Yun2Yun2))?,
             '恆' => get_keyword(&mut iter, &['恆', '為', '是'], Lex::Heng2Wei2Shi4)?,
             '所' => get_keyword(&mut iter, &['所', '餘', '幾', '何'], Lex::Suo3Yu2Ji3He2)?,
             '書' => get_keyword(&mut iter, &['書', '之'], Lex::Shu1Zhi1)?,
