@@ -187,14 +187,16 @@ impl IdentBiMap {
                 }
             }
             parse::Statement::Math { math } => self.insert_math(math, &conversion_table),
-            parse::Statement::Assign { ident, data } => {
+            parse::Statement::Assign { ident, data , opt_index: _ } => {
                 self.insert_ident(&ident, &conversion_table);
                 self.mutable_idents.insert(ident.clone());
                 self.insert_data_or_qi2(data, &conversion_table);
             }
-            parse::Statement::AssignInd { ident, index, data } => {
-                self.insert_ident(&ident, &conversion_table)
-            },
+            parse::Statement::AssignInd { ident, index, data, opt_index: _ } => {
+                self.insert_ident(&ident, &conversion_table);
+                self.mutable_idents.insert(ident.clone());
+                self.insert_data_or_qi2(data, &conversion_table)
+            }
             parse::Statement::Print
             | parse::Statement::Flush
             | parse::Statement::Break

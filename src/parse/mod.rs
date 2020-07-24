@@ -44,11 +44,13 @@ pub enum Statement {
     Assign {
         ident: Identifier,
         data: DataOrQi2,
+        opt_index: Option<i64>
     },
     AssignInd {
         ident: Identifier,
         index: i64,
         data: DataOrQi2,
+        opt_index: Option<i64>
     },
     // Import,
     // Object,
@@ -351,14 +353,31 @@ fn parse_identifier(iter: &mut LexIter<'_>) -> Result<Identifier, Error> {
     }
 }
 
-fn parse_assign_after_zhe3(mut iter: &mut LexIter<'_>) -> Result<DataOrQi2, Error> {
+fn parse_assign_after_zhe3(mut iter: &mut LexIter<'_>) -> Result<(DataOrQi2, Option<i64>), Error> {
     match iter.next().ok_or(Error::UnexpectedEOF)? {
         lex::Lex::Jin1Bu4Fu4Cun2Yi3 => unimplemented!("昔之 ... 者今不復存矣"),
         lex::Lex::Jin1 => {
             let data = parse_data_or_qi2(&mut iter)?;
             match iter.next().ok_or(Error::UnexpectedEOF)? {
-                lex::Lex::Zhi1 => unimplemented!("昔之 ... 者今data之INT_NUM是矣"),
-                lex::Lex::Shi4Yi3 => Ok(data),
+                lex::Lex::Zhi1 => {
+                    match iter.next().ok_or(Error::UnexpectedEOF)? {
+                        lex::Lex::IntNum(int_num) => {
+                            if let lex::Lex::Shi4Yi3 = iter.next().ok_or(Error::UnexpectedEOF)? {
+                                Ok((data, Some(interpret_intnum(int_num))))
+                            } else {
+                                Err(Error::SomethingWentWrong)
+                            }
+                        },
+                        lex::Lex::StringLiteral(lit) => {
+                            unimplemented!("昔之 ... 者今data之STRING_LITERAL是矣")
+                        } // not in spec.html but I believe it exists
+                        lex::Lex::Identifier(id) => {
+                            unimplemented!("昔之  ... 者今data之IDENTIFIER是矣")
+                        } // not in spec.html but I believe it exists
+                        _ => Err(Error::SomethingWentWrong),
+                    }
+                }
+                lex::Lex::Shi4Yi3 => Ok((data, None)),
                 _ => Err(Error::SomethingWentWrong),
             }
         }
@@ -385,11 +404,12 @@ fn parse_assign_after_xi1zhi1(mut iter: &mut LexIter<'_>) -> Result<Statement, E
         lex::Lex::Zhi1 => match iter.next().ok_or(Error::UnexpectedEOF)? {
             lex::Lex::IntNum(int_num) => {
                 if let lex::Lex::Zhe3 = iter.next().ok_or(Error::UnexpectedEOF)? {
-                    let data = parse_assign_after_zhe3(&mut iter)?;
+                    let (data, opt_index) = parse_assign_after_zhe3(&mut iter)?;
                     Ok(Statement::AssignInd {
                         ident,
                         index: interpret_intnum(&int_num),
                         data,
+                        opt_index
                     })
                 } else {
                     Err(Error::SomethingWentWrong)
@@ -400,8 +420,8 @@ fn parse_assign_after_xi1zhi1(mut iter: &mut LexIter<'_>) -> Result<Statement, E
             _ => Err(Error::SomethingWentWrong),
         },
         lex::Lex::Zhe3 => {
-            let data = parse_assign_after_zhe3(&mut iter)?;
-            Ok(Statement::Assign { ident, data })
+            let (data, opt_index) = parse_assign_after_zhe3(&mut iter)?;
+            Ok(Statement::Assign { ident, data, opt_index })
         }
         _ => Err(Error::SomethingWentWrong),
     }
