@@ -367,29 +367,15 @@ fn compile_if(
 ) -> Vec<Line> {
     let (ifcond, ifstmts) = ifcase;
     let mut r = vec![compile_ifcond(&mut env, ifcond, "if")];
-
-    env.indent_level += 1;
-    for st in ifstmts {
-        r.append(&mut compile_statement(&mut env, &st));
-    }
-    env.indent_level -= 1;
-
+    compile_indent(&mut env, &mut r, &ifstmts);
     for (elseifcond, elseifstmts) in elseifcases {
         r.push(compile_ifcond(&mut env, elseifcond, "} else if"));
-        env.indent_level += 1;
-        for st in elseifstmts {
-            r.append(&mut compile_statement(&mut env, &st));
-        }
-        env.indent_level -= 1;
+        compile_indent(&mut env, &mut r, &elseifstmts)
     }
 
     if !elsecase.is_empty() {
         r.push((env.indent_level, "} else {".to_string()));
-        env.indent_level += 1;
-        for st in elsecase {
-            r.append(&mut compile_statement(&mut env, &st));
-        }
-        env.indent_level -= 1;
+        compile_indent(&mut env, &mut r, &elsecase)
     }
     r.push((env.indent_level, "}".to_string()));
     r
@@ -533,12 +519,6 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             compile_forenum_ident(&mut env, ident, statements)
         }
         parse::Statement::ForArr { list, elem, stmts } => {
-            let mut inner = vec![];
-            env.indent_level += 1;
-            for st in stmts {
-                inner.append(&mut compile_statement(&mut env, &st));
-            }
-            env.indent_level -= 1;
             let mut r = vec![(
                 env.indent_level,
                 format!(
@@ -547,12 +527,20 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
                     env.ident_map.translate_from_hanzi(list)
                 ),
             )];
-            r.append(&mut inner);
+            compile_indent(&mut env, &mut r, &stmts);
             r.push((env.indent_level, "}".to_string()));
             r
         }
         parse::Statement::Loop { statements } => compile_loop(&mut env, statements),
     }
+}
+
+fn compile_indent(mut env: &mut Env, r: &mut Vec<Line>, stmts: &[parse::Statement]) {
+    env.indent_level += 1;
+    for st in stmts {
+        r.append(&mut compile_statement(&mut env, &st));
+    }
+    env.indent_level -= 1;
 }
 
 fn compile_lvalue(env: &Env, lvalue: &parse::Lvalue) -> String {
@@ -602,13 +590,7 @@ fn compile_forenum_ident(
     env.rand_counter += 1;
     let rand_n = env.rand_counter;
 
-    env.indent_level += 1;
-
-    for st in statements {
-        inner.append(&mut compile_statement(&mut env, &st));
-    }
-
-    env.indent_level -= 1;
+    compile_indent(&mut env, &mut inner, statements);
     let mut r = vec![
         (env.indent_level, format!("let mut _rand{} = 0.0;", rand_n,)),
         (
@@ -630,11 +612,7 @@ fn compile_forenum_ident(
 
 fn compile_loop(mut env: &mut Env, statements: &[parse::Statement]) -> Vec<Line> {
     let mut r = vec![(env.indent_level, "loop {".to_string())];
-    env.indent_level += 1;
-    for st in statements {
-        r.append(&mut compile_statement(&mut env, &st));
-    }
-    env.indent_level -= 1;
+    compile_indent(&mut env, &mut r, statements);
     r.push((env.indent_level, "}".to_string()));
     r
 }
