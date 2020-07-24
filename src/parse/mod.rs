@@ -45,15 +45,19 @@ pub enum Statement {
         ident: Identifier,
         data: DataOrQi2,
     },
+    AssignInd {
+        ident: Identifier,
+        index: i64,
+        data: DataOrQi2,
+    },
     // Import,
     // Object,
     Reference {
         data: Data,
-        ident: Option<Identifier>,
     },
     ReferenceInd {
         data: Data,
-        index: i64
+        index: i64,
     },
     ArrayFill {
         what_to_fill: IdentOrQi2,
@@ -347,6 +351,21 @@ fn parse_identifier(iter: &mut LexIter<'_>) -> Result<Identifier, Error> {
     }
 }
 
+fn parse_assign_after_zhe3(mut iter: &mut LexIter<'_>) -> Result<DataOrQi2, Error> {
+    match iter.next().ok_or(Error::UnexpectedEOF)? {
+        lex::Lex::Jin1Bu4Fu4Cun2Yi3 => unimplemented!("昔之 ... 者今不復存矣"),
+        lex::Lex::Jin1 => {
+            let data = parse_data_or_qi2(&mut iter)?;
+            match iter.next().ok_or(Error::UnexpectedEOF)? {
+                lex::Lex::Zhi1 => unimplemented!("昔之 ... 者今data之INT_NUM是矣"),
+                lex::Lex::Shi4Yi3 => Ok(data),
+                _ => Err(Error::SomethingWentWrong),
+            }
+        }
+        _ => Err(Error::SomethingWentWrong),
+    }
+}
+
 fn parse_assign_after_xi1zhi1(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
     // '昔之' IDENTIFIER
     // (
@@ -363,19 +382,27 @@ fn parse_assign_after_xi1zhi1(mut iter: &mut LexIter<'_>) -> Result<Statement, E
     // ) ;
     let ident = parse_identifier(&mut iter)?;
     match iter.next().ok_or(Error::UnexpectedEOF)? {
-        lex::Lex::Zhi1 => unimplemented!("昔之 IDENTIFIER 之 (INT_NUM|STRING_LITERAL|IDENTIFIER)"),
-        lex::Lex::Zhe3 => match iter.next().ok_or(Error::UnexpectedEOF)? {
-            lex::Lex::Jin1Bu4Fu4Cun2Yi3 => unimplemented!("昔之 ... 者今不復存矣"),
-            lex::Lex::Jin1 => {
-                let data = parse_data_or_qi2(&mut iter)?;
-                match iter.next().ok_or(Error::UnexpectedEOF)? {
-                    lex::Lex::Zhi1 => unimplemented!("昔之 ... 者今data之INT_NUM是矣"),
-                    lex::Lex::Shi4Yi3 => Ok(Statement::Assign { ident, data }),
-                    _ => Err(Error::SomethingWentWrong),
+        lex::Lex::Zhi1 => match iter.next().ok_or(Error::UnexpectedEOF)? {
+            lex::Lex::IntNum(int_num) => {
+                if let lex::Lex::Zhe3 = iter.next().ok_or(Error::UnexpectedEOF)? {
+                    let data = parse_assign_after_zhe3(&mut iter)?;
+                    Ok(Statement::AssignInd {
+                        ident,
+                        index: interpret_intnum(&int_num),
+                        data,
+                    })
+                } else {
+                    Err(Error::SomethingWentWrong)
                 }
             }
+            lex::Lex::StringLiteral(lit) => unimplemented!("昔之 IDENTIFIER 之 STRING"),
+            lex::Lex::Identifier(id) => unimplemented!("昔之 IDENTIFIER 之 IDENTIFIER 者"),
             _ => Err(Error::SomethingWentWrong),
         },
+        lex::Lex::Zhe3 => {
+            let data = parse_assign_after_zhe3(&mut iter)?;
+            Ok(Statement::Assign { ident, data })
+        }
         _ => Err(Error::SomethingWentWrong),
     }
 }
@@ -383,26 +410,29 @@ fn parse_assign_after_xi1zhi1(mut iter: &mut LexIter<'_>) -> Result<Statement, E
 fn parse_reference_statement_after_fu2(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
     // reference_statement         : '夫' data ('之' (STRING_LITERAL|INT_NUM|'其餘'|IDENTIFIER|'長'))? name_single_statement? ;
     // but no need to handle name_single_statement;
-    // since 
+    // since
     // ```
     // 加二以四。夫「丙」。名之曰「戊」曰「己」。
     // ```
     // compiles, it must be that name_single_statement can just as validly treated as a separate entity.
     let data = parse_data(&mut iter)?;
     match iter.peek() {
-        Some(lex::Lex::Zhi1) => { // ('之' (STRING_LITERAL|INT_NUM|'其餘'|IDENTIFIER|'長'))?
+        Some(lex::Lex::Zhi1) => {
+            // ('之' (STRING_LITERAL|INT_NUM|'其餘'|IDENTIFIER|'長'))?
             iter.next();
             match iter.next().ok_or(Error::SomethingWentWrong)? {
-            
                 lex::Lex::StringLiteral(lit) => unimplemented!("夫 data 之 STRING_LITERAL"),
-                lex::Lex::IntNum(index) => Ok(Statement::ReferenceInd { data, index: interpret_intnum(&index) }),
+                lex::Lex::IntNum(index) => Ok(Statement::ReferenceInd {
+                    data,
+                    index: interpret_intnum(&index),
+                }),
                 lex::Lex::Qi2Yu2 => unimplemented!("夫 data 之 其餘"),
                 lex::Lex::Identifier(ident) => unimplemented!("夫 data 之 IDENTIFIER"),
                 lex::Lex::Chang2 => unimplemented!("夫 data 之長"),
-                _ => Err(Error::SomethingWentWrong)
+                _ => Err(Error::SomethingWentWrong),
             }
-        },
-        _ => Ok(Statement::Reference { data, ident: None }),
+        }
+        _ => Ok(Statement::Reference { data }),
     }
 }
 

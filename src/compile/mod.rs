@@ -472,43 +472,23 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             elseifcases,
             elsecase,
         } => compile_if(&mut env, ifcase, elseifcases, elsecase),
-        parse::Statement::Reference { data, ident: None } => {
-            /* not named */
-            vec![(
-                env.indent_level,
-                format!(
-                    "let _ans{} = {};",
-                    get_new_unnamed_var(&mut env),
-                    compile_literal(&env, data)
-                ),
-            )]
-        }
-        parse::Statement::Reference {
-            data,
-            ident: Some(ident),
-        } => vec![
-            (
-                env.indent_level,
-                format!(
-                    "let _ans{} = {};",
-                    get_new_unnamed_var(&mut env),
-                    compile_literal(&env, data),
-                ),
+        parse::Statement::Reference { data } => vec![(
+            env.indent_level,
+            format!(
+                "let _ans{} = {};",
+                get_new_unnamed_var(&mut env),
+                compile_literal(&env, data)
             ),
-            (
-                env.indent_level,
-                format!(
-                    "let {}{} = _ans{};",
-                    ifmutable_thenmut(&env, &ident),
-                    env.ident_map.translate_from_hanzi(&ident),
-                    env.ans_counter,
-                ),
+        )],
+        parse::Statement::ReferenceInd { data, index } => vec![(
+            env.indent_level,
+            format!(
+                "let _ans{} = {}[{} - 1];",
+                get_new_unnamed_var(&mut env),
+                compile_literal(&env, data),
+                index
             ),
-        ],
-        parse::Statement::ReferenceInd {
-            data,
-            index
-        } => vec![(env.indent_level, format!("let _ans{} = {}[{} - 1];", get_new_unnamed_var(&mut env), compile_literal(&env, data),  index))],
+        )],
         parse::Statement::NameMulti { idents } => compile_name_multi_statement(&mut env, &idents),
         parse::Statement::Flush => {
             env.variables_not_yet_named = vec![];
@@ -551,6 +531,15 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
                 env.ident_map.translate_from_hanzi(&ident),
                 compile_dataorqi2(&mut env, data)
             ),
+        )],
+        parse::Statement::AssignInd { ident, index, data } => vec![(
+            env.indent_level,
+            format!(
+                "{}[{} - 1] = {};",
+                env.ident_map.translate_from_hanzi(&ident),
+                index,
+                compile_dataorqi2(&mut env, data),
+            )
         )],
         parse::Statement::InitDefine { type_, data, name } => vec![(
             env.indent_level,

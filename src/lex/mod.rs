@@ -136,7 +136,6 @@ pub enum Lex {
     /// 銜
     Xian2,
 
-    
     /// 長
     Chang2,
 
