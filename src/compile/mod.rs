@@ -562,14 +562,10 @@ fn compile_lvalue(env: &Env, lvalue: &parse::Lvalue) -> String {
 
 fn compile_rvalue(mut env: &mut Env, rvalue: &parse::Rvalue) -> String {
     match rvalue {
-        parse::Rvalue {
-            data,
-            opt_index: Some(index),
-        } => format!("{}[{} - 1]", compile_dataorqi2(&mut env, data), index),
-        parse::Rvalue {
-            data,
-            opt_index: None,
-        } => format!("{}", compile_dataorqi2(&mut env, data)),
+        parse::Rvalue::Index(data, index) => {
+            format!("{}[{} - 1]", compile_dataorqi2(&mut env, data), index)
+        }
+        parse::Rvalue::Simple(data) => format!("{}", compile_dataorqi2(&mut env, data)),
     }
 }
 

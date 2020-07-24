@@ -193,19 +193,31 @@ impl IdentBiMap {
                         ident,
                         opt_index: None,
                     },
-                rvalue: parse::Rvalue { data, opt_index: _ },
-            } => {
-                self.insert_ident(&ident, &conversion_table);
-                self.mutable_idents.insert(ident.clone());
-                self.insert_data_or_qi2(data, &conversion_table);
+                rvalue: parse::Rvalue::Index(data, _),
             }
-            parse::Statement::Assignment {
+            | parse::Statement::Assignment {
+                lvalue:
+                    parse::Lvalue {
+                        ident,
+                        opt_index: None,
+                    },
+                rvalue: parse::Rvalue::Simple(data),
+            }
+            | parse::Statement::Assignment {
                 lvalue:
                     parse::Lvalue {
                         ident,
                         opt_index: Some(_), // FIXME: need to consder this once the possibility of index being an identifier is added
                     },
-                rvalue: parse::Rvalue { data, opt_index: _ },
+                rvalue: parse::Rvalue::Simple(data),
+            }
+            | parse::Statement::Assignment {
+                lvalue:
+                    parse::Lvalue {
+                        ident,
+                        opt_index: Some(_), // FIXME: need to consder this once the possibility of index being an identifier is added
+                    },
+                rvalue: parse::Rvalue::Index(data, _),
             } => {
                 self.insert_ident(&ident, &conversion_table);
                 self.mutable_idents.insert(ident.clone());
