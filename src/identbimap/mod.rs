@@ -97,6 +97,21 @@ impl IdentBiMap {
         }
     }
 
+    fn insert_unaryifexpr(
+        &mut self,
+        unary: &parse::UnaryIfExpr,
+        conversion_table: &HashMap<String, String>,
+    ) {
+        match unary {
+            parse::UnaryIfExpr::Simple(data) => self.insert_data_or_qi2(data, &conversion_table),
+            parse::UnaryIfExpr::Complex(parse::RvalueNoQi2::Index(data, _))
+            | parse::UnaryIfExpr::Complex(parse::RvalueNoQi2::Simple(data))
+            | parse::UnaryIfExpr::Complex(parse::RvalueNoQi2::Length(data)) => {
+                self.insert_dat(data, &conversion_table)
+            }
+        }
+    }
+
     fn insert_ifexpr(
         &mut self,
         ifexpr: &parse::IfCond,
@@ -104,11 +119,11 @@ impl IdentBiMap {
     ) {
         match ifexpr {
             parse::IfCond::Binary(data1, _, data2) => {
-                self.insert_data_or_qi2(data1, &conversion_table);
-                self.insert_data_or_qi2(data2, &conversion_table);
+                self.insert_unaryifexpr(data1, &conversion_table);
+                self.insert_unaryifexpr(data2, &conversion_table);
             }
             parse::IfCond::Unary(data) => {
-                self.insert_data_or_qi2(data, &conversion_table);
+                self.insert_unaryifexpr(data, &conversion_table);
             }
             parse::IfCond::NotQi2 => {}
         }

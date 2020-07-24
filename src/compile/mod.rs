@@ -332,6 +332,24 @@ fn compile_name_multi_statement(mut env: &mut Env, idents: &[parse::Identifier])
     res
 }
 
+fn compile_unaryifexpr(mut env: &mut Env, unary: &parse::UnaryIfExpr) -> String {
+    match unary {
+        parse::UnaryIfExpr::Simple(data1) => compile_dataorqi2(&mut env, data1),
+        parse::UnaryIfExpr::Complex(parse::RvalueNoQi2::Simple(d)) => {
+            compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(d.clone()))
+        }
+        parse::UnaryIfExpr::Complex(parse::RvalueNoQi2::Length(d)) => format!(
+            "({}.len() as f64)",
+            compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(d.clone()))
+        ),
+        parse::UnaryIfExpr::Complex(parse::RvalueNoQi2::Index(d, ind)) => format!(
+            "{}[{} - 1]",
+            compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(d.clone())),
+            ind
+        ),
+    }
+}
+
 fn compile_ifcond(mut env: &mut Env, ifcond: &parse::IfCond, keyword: &str) -> Line {
     match ifcond {
         parse::IfCond::Binary(data1, op, data2) => (
@@ -339,14 +357,14 @@ fn compile_ifcond(mut env: &mut Env, ifcond: &parse::IfCond, keyword: &str) -> L
             format!(
                 "{} {} {} {} {{",
                 keyword,
-                compile_dataorqi2(&mut env, data1),
+                compile_unaryifexpr(&mut env, data1),
                 op.to_str(),
-                compile_dataorqi2(&mut env, data2),
+                compile_unaryifexpr(&mut env, data2),
             ),
         ),
         parse::IfCond::Unary(data1) => (
             env.indent_level,
-            format!("{} {} {{", keyword, compile_dataorqi2(&mut env, data1),),
+            format!("{} {} {{", keyword, compile_unaryifexpr(&mut env, data1)),
         ),
         parse::IfCond::NotQi2 => (
             env.indent_level,
@@ -470,7 +488,7 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
         } => vec![(
             env.indent_level,
             format!(
-                "let _ans{} = {}.len();",
+                "let _ans{} = {}.len() as f64;",
                 get_new_unnamed_var(&mut env),
                 compile_literal(&env, data),
             ),
@@ -580,7 +598,7 @@ fn compile_rvalue(mut env: &mut Env, rvalue: &parse::Rvalue) -> String {
             format!("{}[{} - 1]", compile_dataorqi2(&mut env, data), index)
         }
         parse::Rvalue::Simple(data) => format!("{}", compile_dataorqi2(&mut env, data)),
-        parse::Rvalue::Length(data) => format!("{}.len()", compile_dataorqi2(&mut env, data)),
+        parse::Rvalue::Length(data) => format!("({}.len() as f64)", compile_dataorqi2(&mut env, data)),
     }
 }
 

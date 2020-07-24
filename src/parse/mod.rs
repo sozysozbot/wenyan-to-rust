@@ -15,7 +15,7 @@ pub enum Rvalue {
     Length(DataOrQi2),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RvalueNoQi2 {
     Simple(Data),
     Index(Data, i64),
@@ -93,9 +93,15 @@ pub enum Statement {
 
 #[derive(Debug, Clone)]
 pub enum IfCond {
-    Unary(DataOrQi2),
-    Binary(DataOrQi2, lex::IfLogicOp, DataOrQi2),
+    Unary(UnaryIfExpr),
+    Binary(UnaryIfExpr, lex::IfLogicOp, UnaryIfExpr),
     NotQi2,
+}
+
+#[derive(Debug, Clone)]
+pub enum UnaryIfExpr {
+    Simple(DataOrQi2),
+    Complex(RvalueNoQi2),
 }
 
 //#[derive(Debug)]
@@ -564,14 +570,59 @@ fn parse_ifexpression_plus_zhe3(mut iter: &mut LexIter<'_>) -> Result<IfCond, Er
     match iter.peek() {
         Some(lex::Lex::Zhe3) => {
             iter.next();
-            Ok(IfCond::Unary(data))
+            Ok(IfCond::Unary(UnaryIfExpr::Simple(data)))
         }
         Some(lex::Lex::IfLogicOp(op)) => {
             iter.next();
-            let data2 = parse_data_or_qi2(&mut iter)?; // FIXME: the possibility of `(IDENTIFIER '之'('長'|STRING_LITERAL|IDENTIFIER))` is ignored
-            match iter.next().ok_or(Error::UnexpectedEOF)? {
-                lex::Lex::Zhe3 => Ok(IfCond::Binary(data, *op, data2)),
-                _ => Err(Error::SomethingWentWrong(here!())),
+            if let lex::Lex::Identifier(i) = iter.peek().ok_or(Error::UnexpectedEOF)? {
+                // either `data` or `(IDENTIFIER '之'('長'|STRING_LITERAL|IDENTIFIER))`
+                if let Some(lex::Lex::Zhi1) = iter.peek_nth(1) {
+                    iter.next(); // Identifier(i)
+                    iter.next(); // Zhi1
+                    match iter.next().ok_or(Error::UnexpectedEOF)? {
+                        lex::Lex::Chang2 => {
+                            if let lex::Lex::Zhe3 = iter.next().ok_or(Error::UnexpectedEOF)? {
+                                Ok(IfCond::Binary(
+                                    UnaryIfExpr::Simple(data),
+                                    *op,
+                                    UnaryIfExpr::Complex(RvalueNoQi2::Length(Data::Identifier(
+                                        Identifier(i.to_string()),
+                                    ))),
+                                ))
+                            } else {
+                                Err(Error::SomethingWentWrong(here!()))
+                            }
+                        }
+                        lex::Lex::StringLiteral(strlit) => unimplemented!(
+                            "unary_if_expression IF_LOGIC_OP IDENTIFIER 之 STRING_LITERAL"
+                        ),
+                        lex::Lex::Identifier(id) => unimplemented!(
+                            "unary_if_expression IF_LOGIC_OP IDENTIFIER 之 IDENTIFIER"
+                        ),
+                        _ => Err(Error::SomethingWentWrong(here!())),
+                    }
+                } else {
+                    let data2 = parse_data_or_qi2(&mut iter)?;
+                    if let lex::Lex::Zhe3 = iter.next().ok_or(Error::UnexpectedEOF)? {
+                        Ok(IfCond::Binary(
+                            UnaryIfExpr::Simple(data),
+                            *op,
+                            UnaryIfExpr::Simple(data2),
+                        ))
+                    } else {
+                        Err(Error::SomethingWentWrong(here!()))
+                    }
+                }
+            } else {
+                let data2 = parse_data_or_qi2(&mut iter)?;
+                match iter.next().ok_or(Error::UnexpectedEOF)? {
+                    lex::Lex::Zhe3 => Ok(IfCond::Binary(
+                        UnaryIfExpr::Simple(data),
+                        *op,
+                        UnaryIfExpr::Simple(data2),
+                    )),
+                    _ => Err(Error::SomethingWentWrong(here!())),
+                }
             }
         }
         _ => Err(Error::SomethingWentWrong(here!())),
@@ -657,7 +708,7 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
         lex::Lex::Ruo4Qi2Ran2Zhe3 => {
             let (ifstmts, elseifcases, elsecase) = parse_if_statement_after_zhe3(&mut iter)?;
             Ok(Statement::If {
-                ifcase: (IfCond::Unary(DataOrQi2::Qi2), ifstmts),
+                ifcase: (IfCond::Unary(UnaryIfExpr::Simple(DataOrQi2::Qi2)), ifstmts),
                 elseifcases,
                 elsecase,
             })
