@@ -3,7 +3,9 @@ use bimap::BiMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-fn to_pinyin(ident: parse::Identifier, conversion_table: &HashMap<String, String>) -> String {
+type Table = HashMap<String, String>;
+
+fn to_pinyin(ident: parse::Identifier, conversion_table: &Table) -> String {
     let parse::Identifier(i) = ident;
     let vec = i
         .chars()
@@ -33,7 +35,7 @@ impl IdentBiMap {
         self.mutable_idents.contains(id)
     }
 
-    pub fn new(parsed: &[parse::Statement], conversion_table: &HashMap<String, String>) -> Self {
+    pub fn new(parsed: &[parse::Statement], conversion_table: &Table) -> Self {
         let mut ans = IdentBiMap {
             bimap: BiMap::new(),
             mutable_idents: HashSet::new(),
@@ -47,11 +49,7 @@ impl IdentBiMap {
         ans
     }
 
-    fn insert_ident(
-        &mut self,
-        ident: &parse::Identifier,
-        conversion_table: &HashMap<String, String>,
-    ) {
+    fn insert_ident(&mut self, ident: &parse::Identifier, conversion_table: &Table) {
         // if already known, no need to do anything
         if self.bimap.get_by_left(&ident).is_some() {
             return;
@@ -71,52 +69,44 @@ impl IdentBiMap {
         }
     }
 
-    fn insert_stmts(
-        &mut self,
-        statements: &[parse::Statement],
-        conversion_table: &HashMap<String, String>,
-    ) {
+    fn insert_stmts(&mut self, statements: &[parse::Statement], conversion_table: &Table) {
         for s in statements {
             self.insert_stmt(&s, &conversion_table)
         }
     }
 
-    fn insert_dat(&mut self, dat: &parse::Data, conversion_table: &HashMap<String, String>) {
+    fn insert_dat(&mut self, dat: &parse::Data, conversion_table: &Table) {
         if let parse::Data::Identifier(id) = dat {
             self.insert_ident(&id, &conversion_table)
         }
     }
 
-    fn insert_data_or_qi2(
-        &mut self,
-        dat: &parse::DataOrQi2,
-        conversion_table: &HashMap<String, String>,
-    ) {
+    fn insert_data_or_qi2(&mut self, dat: &parse::DataOrQi2, conversion_table: &Table) {
         if let parse::DataOrQi2::Data(d1) = dat {
             self.insert_dat(d1, &conversion_table);
         }
     }
 
-    fn insert_unaryifexpr(
-        &mut self,
-        unary: &parse::UnaryIfExpr,
-        conversion_table: &HashMap<String, String>,
-    ) {
-        match unary {
-            parse::UnaryIfExpr::Simple(data) => self.insert_data_or_qi2(data, &conversion_table),
-            parse::UnaryIfExpr::Complex(parse::RvalueNoQi2::Index(data, _))
-            | parse::UnaryIfExpr::Complex(parse::RvalueNoQi2::Simple(data))
-            | parse::UnaryIfExpr::Complex(parse::RvalueNoQi2::Length(data)) => {
-                self.insert_dat(data, &conversion_table)
+    fn insert_rvaluenoqi2(&mut self, val: &parse::RvalueNoQi2, conversion_table: &Table) {
+        match val {
+            parse::RvalueNoQi2::Index(data, _)
+            | parse::RvalueNoQi2::Simple(data)
+            | parse::RvalueNoQi2::Length(data) => self.insert_dat(data, &conversion_table),
+            parse::RvalueNoQi2::IndexByIdent(data, ident) => {
+                self.insert_dat(data, &conversion_table);
+                self.insert_ident(ident, &conversion_table)
             }
         }
     }
 
-    fn insert_ifexpr(
-        &mut self,
-        ifexpr: &parse::IfCond,
-        conversion_table: &HashMap<String, String>,
-    ) {
+    fn insert_unaryifexpr(&mut self, unary: &parse::UnaryIfExpr, conversion_table: &Table) {
+        match unary {
+            parse::UnaryIfExpr::Simple(data) => self.insert_data_or_qi2(data, &conversion_table),
+            parse::UnaryIfExpr::Complex(val) => self.insert_rvaluenoqi2(val, &conversion_table),
+        }
+    }
+
+    fn insert_ifexpr(&mut self, ifexpr: &parse::IfCond, conversion_table: &Table) {
         match ifexpr {
             parse::IfCond::Binary(data1, _, data2) => {
                 self.insert_unaryifexpr(data1, &conversion_table);
@@ -129,7 +119,7 @@ impl IdentBiMap {
         }
     }
 
-    fn insert_math(&mut self, math: &parse::MathKind, conversion_table: &HashMap<String, String>) {
+    fn insert_math(&mut self, math: &parse::MathKind, conversion_table: &Table) {
         match math {
             parse::MathKind::ArithUnaryMath(data) => {
                 self.insert_data_or_qi2(data, &conversion_table)
@@ -146,7 +136,7 @@ impl IdentBiMap {
             }
         }
     }
-    fn insert_stmt(&mut self, st: &parse::Statement, conversion_table: &HashMap<String, String>) {
+    fn insert_stmt(&mut self, st: &parse::Statement, conversion_table: &Table) {
         match st {
             parse::Statement::ForArr { list, elem, stmts } => {
                 self.insert_ident(&list, &conversion_table);
@@ -190,11 +180,9 @@ impl IdentBiMap {
                     self.insert_stmt(&s, &conversion_table)
                 }
             }
-            parse::Statement::Reference { rvalue } => match rvalue {
-                parse::RvalueNoQi2::Simple(data)
-                | parse::RvalueNoQi2::Index(data, _)
-                | parse::RvalueNoQi2::Length(data) => self.insert_dat(data, &conversion_table),
-            },
+            parse::Statement::Reference { rvalue } => {
+                self.insert_rvaluenoqi2(rvalue, &conversion_table)
+            }
             parse::Statement::NameMulti { idents } => {
                 for id in idents {
                     self.insert_ident(&id, &conversion_table);

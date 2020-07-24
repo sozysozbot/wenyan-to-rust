@@ -332,21 +332,37 @@ fn compile_name_multi_statement(mut env: &mut Env, idents: &[parse::Identifier])
     res
 }
 
-fn compile_unaryifexpr(mut env: &mut Env, unary: &parse::UnaryIfExpr) -> String {
-    match unary {
-        parse::UnaryIfExpr::Simple(data1) => compile_dataorqi2(&mut env, data1),
-        parse::UnaryIfExpr::Complex(parse::RvalueNoQi2::Simple(d)) => {
+fn compile_rvalue_noqi2(mut env: &mut Env, rv: &parse::RvalueNoQi2, paren_when_casted : bool) -> String {
+    match rv {
+        parse::RvalueNoQi2::Simple(d) => {
             compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(d.clone()))
         }
-        parse::UnaryIfExpr::Complex(parse::RvalueNoQi2::Length(d)) => format!(
+        parse::RvalueNoQi2::Length(d) => if paren_when_casted {format!(
             "({}.len() as f64)",
             compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(d.clone()))
-        ),
-        parse::UnaryIfExpr::Complex(parse::RvalueNoQi2::Index(d, ind)) => format!(
+        )} else {
+            format!(
+                "{}.len() as f64",
+                compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(d.clone()))
+            )
+        },
+        parse::RvalueNoQi2::Index(d, ind) => format!(
             "{}[{} - 1]",
             compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(d.clone())),
             ind
         ),
+        parse::RvalueNoQi2::IndexByIdent(d, ident) => format!(
+            "{}[({} as usize) - 1]",
+            compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(d.clone())),
+            env.ident_map.translate_from_hanzi(&ident)
+        ),
+    }
+}
+
+fn compile_unaryifexpr(mut env: &mut Env, unary: &parse::UnaryIfExpr) -> String {
+    match unary {
+        parse::UnaryIfExpr::Simple(data1) => compile_dataorqi2(&mut env, data1),
+        parse::UnaryIfExpr::Complex(rv) => compile_rvalue_noqi2(&mut env, &rv, true),
     }
 }
 
@@ -462,37 +478,15 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             elseifcases,
             elsecase,
         } => compile_if(&mut env, ifcase, elseifcases, elsecase),
-        parse::Statement::Reference {
-            rvalue: parse::RvalueNoQi2::Simple(data),
-        } => vec![(
+        parse::Statement::Reference { rvalue } => vec![(
             env.indent_level,
             format!(
                 "let _ans{} = {};",
                 get_new_unnamed_var(&mut env),
-                compile_literal(&env, data)
+                compile_rvalue_noqi2(&mut env, rvalue, false)
             ),
         )],
-        parse::Statement::Reference {
-            rvalue: parse::RvalueNoQi2::Index(data, index),
-        } => vec![(
-            env.indent_level,
-            format!(
-                "let _ans{} = {}[{} - 1];",
-                get_new_unnamed_var(&mut env),
-                compile_literal(&env, data),
-                index
-            ),
-        )],
-        parse::Statement::Reference {
-            rvalue: parse::RvalueNoQi2::Length(data),
-        } => vec![(
-            env.indent_level,
-            format!(
-                "let _ans{} = {}.len() as f64;",
-                get_new_unnamed_var(&mut env),
-                compile_literal(&env, data),
-            ),
-        )],
+
         parse::Statement::NameMulti { idents } => compile_name_multi_statement(&mut env, &idents),
         parse::Statement::Flush => {
             env.variables_not_yet_named = vec![];

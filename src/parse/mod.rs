@@ -19,6 +19,7 @@ pub enum Rvalue {
 pub enum RvalueNoQi2 {
     Simple(Data),
     Index(Data, i64),
+    IndexByIdent(Data, Identifier),
     Length(Data),
 }
 
@@ -470,7 +471,9 @@ fn parse_reference_statement_after_fu2(mut iter: &mut LexIter<'_>) -> Result<Sta
                     rvalue: RvalueNoQi2::Index(data, interpret_intnum(&index)),
                 }),
                 lex::Lex::Qi2Yu2 => unimplemented!("夫 data 之 其餘"),
-                lex::Lex::Identifier(ident) => unimplemented!("夫 data 之 IDENTIFIER"),
+                lex::Lex::Identifier(ident) => Ok(Statement::Reference {
+                    rvalue: RvalueNoQi2::IndexByIdent(data, Identifier(ident.clone())),
+                }),
                 lex::Lex::Chang2 => Ok(Statement::Reference {
                     rvalue: RvalueNoQi2::Length(data),
                 }),

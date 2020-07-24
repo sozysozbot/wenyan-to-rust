@@ -350,3 +350,7 @@ fn test077() {
 fn test078() {
     test("test078")
 }
+#[test]
+fn test079() {
+    test("test079")
+}
