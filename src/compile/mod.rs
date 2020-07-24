@@ -332,20 +332,28 @@ fn compile_name_multi_statement(mut env: &mut Env, idents: &[parse::Identifier])
     res
 }
 
-fn compile_rvalue_noqi2(mut env: &mut Env, rv: &parse::RvalueNoQi2, paren_when_casted : bool) -> String {
+fn compile_rvalue_noqi2(
+    mut env: &mut Env,
+    rv: &parse::RvalueNoQi2,
+    paren_when_casted: bool,
+) -> String {
     match rv {
         parse::RvalueNoQi2::Simple(d) => {
             compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(d.clone()))
         }
-        parse::RvalueNoQi2::Length(d) => if paren_when_casted {format!(
-            "({}.len() as f64)",
-            compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(d.clone()))
-        )} else {
-            format!(
-                "{}.len() as f64",
-                compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(d.clone()))
-            )
-        },
+        parse::RvalueNoQi2::Length(d) => {
+            if paren_when_casted {
+                format!(
+                    "({}.len() as f64)",
+                    compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(d.clone()))
+                )
+            } else {
+                format!(
+                    "{}.len() as f64",
+                    compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(d.clone()))
+                )
+            }
+        }
         parse::RvalueNoQi2::Index(d, ind) => format!(
             "{}[{} - 1]",
             compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(d.clone())),
@@ -493,6 +501,14 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             vec![]
         }
         parse::Statement::Math { math } => compile_math(&mut env, math),
+        parse::Statement::ReferenceWhatIsLeft { data } => vec![(
+            env.indent_level,
+            format!(
+                "let  _ans{} = &{}[1..].to_vec();",
+                get_new_unnamed_var(&mut env),
+                compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(data.clone()))
+            ),
+        )],
         parse::Statement::Declare(parse::DeclareStatement {
             how_many_variables,
             type_,

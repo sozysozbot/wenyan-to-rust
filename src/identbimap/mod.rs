@@ -138,6 +138,9 @@ impl IdentBiMap {
     }
     fn insert_stmt(&mut self, st: &parse::Statement, conversion_table: &Table) {
         match st {
+            parse::Statement::ReferenceWhatIsLeft { data } => {
+                self.insert_dat(&data, &conversion_table);
+            }
             parse::Statement::ForArr { list, elem, stmts } => {
                 self.insert_ident(&list, &conversion_table);
                 self.insert_ident(&elem, &conversion_table);

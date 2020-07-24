@@ -71,6 +71,9 @@ pub enum Statement {
     Reference {
         rvalue: RvalueNoQi2,
     },
+    ReferenceWhatIsLeft {
+        data: Data,
+    },
     ArrayFill {
         what_to_fill: IdentOrQi2,
         elems: Vec<Data>,
@@ -470,7 +473,7 @@ fn parse_reference_statement_after_fu2(mut iter: &mut LexIter<'_>) -> Result<Sta
                 lex::Lex::IntNum(index) => Ok(Statement::Reference {
                     rvalue: RvalueNoQi2::Index(data, interpret_intnum(&index)),
                 }),
-                lex::Lex::Qi2Yu2 => unimplemented!("夫 data 之 其餘"),
+                lex::Lex::Qi2Yu2 => Ok(Statement::ReferenceWhatIsLeft { data }),
                 lex::Lex::Identifier(ident) => Ok(Statement::Reference {
                     rvalue: RvalueNoQi2::IndexByIdent(data, Identifier(ident.clone())),
                 }),
