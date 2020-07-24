@@ -3,6 +3,18 @@ type LexIter<'a> = peek_nth::PeekableNth<std::slice::Iter<'a, lex::Lex>>;
 pub type CondPlusStatements = (IfCond, Vec<Statement>);
 
 #[derive(Debug)]
+pub struct Lvalue {
+    pub ident: Identifier,
+    pub opt_index: Option<i64>,
+}
+
+#[derive(Debug)]
+pub struct Rvalue {
+    pub data: DataOrQi2,
+    pub opt_index: Option<i64>,
+}
+
+#[derive(Debug)]
 pub enum Statement {
     Declare(DeclareStatement),
     Print,
@@ -41,16 +53,9 @@ pub enum Statement {
     Math {
         math: MathKind,
     },
-    Assign {
-        ident: Identifier,
-        data: DataOrQi2,
-        opt_index: Option<i64>
-    },
-    AssignInd {
-        ident: Identifier,
-        index: i64,
-        data: DataOrQi2,
-        opt_index: Option<i64>
+    Assignment {
+        lvalue: Lvalue,
+        rvalue: Rvalue,
     },
     // Import,
     // Object,
@@ -367,7 +372,7 @@ fn parse_assign_after_zhe3(mut iter: &mut LexIter<'_>) -> Result<(DataOrQi2, Opt
                             } else {
                                 Err(Error::SomethingWentWrong)
                             }
-                        },
+                        }
                         lex::Lex::StringLiteral(lit) => {
                             unimplemented!("昔之 ... 者今data之STRING_LITERAL是矣")
                         } // not in spec.html but I believe it exists
@@ -405,11 +410,12 @@ fn parse_assign_after_xi1zhi1(mut iter: &mut LexIter<'_>) -> Result<Statement, E
             lex::Lex::IntNum(int_num) => {
                 if let lex::Lex::Zhe3 = iter.next().ok_or(Error::UnexpectedEOF)? {
                     let (data, opt_index) = parse_assign_after_zhe3(&mut iter)?;
-                    Ok(Statement::AssignInd {
-                        ident,
-                        index: interpret_intnum(&int_num),
-                        data,
-                        opt_index
+                    Ok(Statement::Assignment {
+                        lvalue: Lvalue {
+                            ident,
+                            opt_index: Some(interpret_intnum(&int_num)),
+                        },
+                        rvalue: Rvalue { data, opt_index },
                     })
                 } else {
                     Err(Error::SomethingWentWrong)
@@ -421,7 +427,10 @@ fn parse_assign_after_xi1zhi1(mut iter: &mut LexIter<'_>) -> Result<Statement, E
         },
         lex::Lex::Zhe3 => {
             let (data, opt_index) = parse_assign_after_zhe3(&mut iter)?;
-            Ok(Statement::Assign { ident, data, opt_index })
+            Ok(Statement::Assignment {
+                lvalue: Lvalue { ident, opt_index },
+                rvalue: Rvalue { data, opt_index },
+            })
         }
         _ => Err(Error::SomethingWentWrong),
     }

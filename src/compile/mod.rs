@@ -524,7 +524,18 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             env.variables_not_yet_named = vec![];
             return vec![(env.indent_level, r)];
         }
-        parse::Statement::Assign { ident, data, opt_index: None } => vec![(
+        parse::Statement::Assignment {
+            lvalue:
+                parse::Lvalue {
+                    ident,
+                    opt_index: None,
+                },
+            rvalue:
+                parse::Rvalue {
+                    data,
+                    opt_index: None,
+                },
+        } => vec![(
             env.indent_level,
             format!(
                 "{} = {};",
@@ -532,7 +543,18 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
                 compile_dataorqi2(&mut env, data)
             ),
         )],
-        parse::Statement::Assign { ident, data, opt_index: Some(ind) } => vec![(
+        parse::Statement::Assignment {
+            lvalue:
+                parse::Lvalue {
+                    ident,
+                    opt_index: None,
+                },
+            rvalue:
+                parse::Rvalue {
+                    data,
+                    opt_index: Some(ind),
+                },
+        } => vec![(
             env.indent_level,
             format!(
                 "{} = {}[{} - 1];",
@@ -541,7 +563,18 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
                 ind
             ),
         )],
-        parse::Statement::AssignInd { ident, index, data, opt_index: None } => vec![(
+        parse::Statement::Assignment {
+            lvalue:
+                parse::Lvalue {
+                    ident,
+                    opt_index: Some(index),
+                },
+            rvalue:
+                parse::Rvalue {
+                    data,
+                    opt_index: None,
+                },
+        } => vec![(
             env.indent_level,
             format!(
                 "{}[{} - 1] = {};",
@@ -550,7 +583,18 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
                 compile_dataorqi2(&mut env, data),
             ),
         )],
-        parse::Statement::AssignInd { ident, index, data, opt_index: Some(ind)} => vec![(
+        parse::Statement::Assignment {
+            lvalue:
+                parse::Lvalue {
+                    ident,
+                    opt_index: Some(index),
+                },
+            rvalue:
+                parse::Rvalue {
+                    data,
+                    opt_index: Some(ind),
+                },
+        } => vec![(
             env.indent_level,
             format!(
                 "{}[{} - 1] = {}[{} - 1];",

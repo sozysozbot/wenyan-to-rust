@@ -187,12 +187,26 @@ impl IdentBiMap {
                 }
             }
             parse::Statement::Math { math } => self.insert_math(math, &conversion_table),
-            parse::Statement::Assign { ident, data , opt_index: _ } => {
+            parse::Statement::Assignment {
+                lvalue:
+                    parse::Lvalue {
+                        ident,
+                        opt_index: None,
+                    },
+                rvalue: parse::Rvalue { data, opt_index: _ },
+            } => {
                 self.insert_ident(&ident, &conversion_table);
                 self.mutable_idents.insert(ident.clone());
                 self.insert_data_or_qi2(data, &conversion_table);
             }
-            parse::Statement::AssignInd { ident, index, data, opt_index: _ } => {
+            parse::Statement::Assignment {
+                lvalue:
+                    parse::Lvalue {
+                        ident,
+                        opt_index: Some(_), // FIXME: need to consder this once the possibility of index being an identifier is added
+                    },
+                rvalue: parse::Rvalue { data, opt_index: _ },
+            } => {
                 self.insert_ident(&ident, &conversion_table);
                 self.mutable_idents.insert(ident.clone());
                 self.insert_data_or_qi2(data, &conversion_table)
