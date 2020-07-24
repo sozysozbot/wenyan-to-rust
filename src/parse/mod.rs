@@ -12,6 +12,14 @@ pub struct Lvalue {
 pub enum Rvalue {
     Simple(DataOrQi2),
     Index(DataOrQi2, i64),
+    Length(DataOrQi2),
+}
+
+#[derive(Debug)]
+pub enum RvalueNoQi2 {
+    Simple(Data),
+    Index(Data, i64),
+    Length(Data),
 }
 
 #[derive(Debug)]
@@ -60,11 +68,7 @@ pub enum Statement {
     // Import,
     // Object,
     Reference {
-        data: Data,
-    },
-    ReferenceInd {
-        data: Data,
-        index: i64,
+        rvalue: RvalueNoQi2,
     },
     ArrayFill {
         what_to_fill: IdentOrQi2,
@@ -140,9 +144,11 @@ pub enum Data {
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, Hash)]
 pub struct Identifier(pub String);
 
+use position::{here, Position};
+
 #[derive(Debug)]
 pub enum Error {
-    SomethingWentWrong,
+    SomethingWentWrong(Position),
     UnexpectedEOF,
     InvalidVariableCount,
 }
@@ -225,7 +231,7 @@ fn parse_data_or_qi2(iter: &mut LexIter<'_>) -> Result<DataOrQi2, Error> {
         )))),
         lex::Lex::IntNum(intnum) => Ok(DataOrQi2::Data(Data::IntNum(interpret_intnum(intnum)))), /* FIXME: must handle float */
         lex::Lex::Qi2 => Ok(DataOrQi2::Qi2),
-        _ => Err(Error::SomethingWentWrong),
+        _ => Err(Error::SomethingWentWrong(here!())),
     }
 }
 
@@ -238,7 +244,7 @@ fn parse_ident_or_qi2(iter: &mut LexIter<'_>) -> Result<IdentOrQi2, Error> {
     match token {
         lex::Lex::Identifier(ident) => Ok(IdentOrQi2::Ident(Identifier(ident.to_string()))),
         lex::Lex::Qi2 => Ok(IdentOrQi2::Qi2),
-        _ => Err(Error::SomethingWentWrong),
+        _ => Err(Error::SomethingWentWrong(here!())),
     }
 }
 
@@ -246,7 +252,7 @@ fn parse_preposition(iter: &mut LexIter<'_>) -> Result<lex::Preposition, Error> 
     if let lex::Lex::Preposition(p) = iter.next().ok_or(Error::UnexpectedEOF)? {
         Ok(*p)
     } else {
-        Err(Error::SomethingWentWrong)
+        Err(Error::SomethingWentWrong(here!()))
     }
 }
 
@@ -261,7 +267,7 @@ fn parse_data(iter: &mut LexIter<'_>) -> Result<Data, Error> {
         lex::Lex::BoolValue(bv) => Ok(Data::BoolValue(bv.interpret())),
         lex::Lex::Identifier(ident) => Ok(Data::Identifier(Identifier(ident.to_string()))),
         lex::Lex::IntNum(intnum) => Ok(Data::IntNum(interpret_intnum(intnum))), /* FIXME: must handle float */
-        _ => Err(Error::SomethingWentWrong),
+        _ => Err(Error::SomethingWentWrong(here!())),
     }
 }
 
@@ -295,16 +301,16 @@ fn parse_init_define_statement_after_you3(mut iter: &mut LexIter<'_>) -> Result<
                                     data
                                 })
                             }
-                            _ =>  Err(Error::SomethingWentWrong),
+                            _ =>  Err(Error::SomethingWentWrong(here!())),
                         }
                     }
-                    _ => Err(Error::SomethingWentWrong),
+                    _ => Err(Error::SomethingWentWrong(here!())),
                 }
             }
             None | Some(..) => panic!("If this message is obtained by a wenyan program that successfully compiles in the original edition, please submit an issue."),
         }
     } else {
-        Err(Error::SomethingWentWrong)
+        Err(Error::SomethingWentWrong(here!()))
     }
 }
 
@@ -326,7 +332,7 @@ fn parse_for_enum_statement_after_wei2shi4(mut iter: &mut LexIter<'_>) -> Result
                     statements: inner,
                 })
             }
-            _ => Err(Error::SomethingWentWrong),
+            _ => Err(Error::SomethingWentWrong(here!())),
         },
         lex::Lex::Identifier(ident) => match iter.next().ok_or(Error::UnexpectedEOF)? {
             lex::Lex::Bian4Loop => {
@@ -344,9 +350,9 @@ fn parse_for_enum_statement_after_wei2shi4(mut iter: &mut LexIter<'_>) -> Result
                     statements: inner,
                 })
             }
-            _ => Err(Error::SomethingWentWrong),
+            _ => Err(Error::SomethingWentWrong(here!())),
         },
-        _ => Err(Error::SomethingWentWrong),
+        _ => Err(Error::SomethingWentWrong(here!())),
     }
 }
 
@@ -354,7 +360,7 @@ fn parse_identifier(iter: &mut LexIter<'_>) -> Result<Identifier, Error> {
     if let lex::Lex::Identifier(ident) = iter.next().ok_or(Error::UnexpectedEOF)? {
         Ok(Identifier(ident.to_string()))
     } else {
-        Err(Error::SomethingWentWrong)
+        Err(Error::SomethingWentWrong(here!()))
     }
 }
 
@@ -370,7 +376,7 @@ fn parse_assign_after_zhe3(mut iter: &mut LexIter<'_>) -> Result<Rvalue, Error> 
                             if let lex::Lex::Shi4Yi3 = iter.next().ok_or(Error::UnexpectedEOF)? {
                                 Ok(Rvalue::Index(data, interpret_intnum(int_num)))
                             } else {
-                                Err(Error::SomethingWentWrong)
+                                Err(Error::SomethingWentWrong(here!()))
                             }
                         }
                         lex::Lex::StringLiteral(lit) => {
@@ -379,14 +385,14 @@ fn parse_assign_after_zhe3(mut iter: &mut LexIter<'_>) -> Result<Rvalue, Error> 
                         lex::Lex::Identifier(id) => {
                             unimplemented!("昔之  ... 者今data之IDENTIFIER是矣")
                         } // not in spec.html but I believe it exists
-                        _ => Err(Error::SomethingWentWrong),
+                        _ => Err(Error::SomethingWentWrong(here!())),
                     }
                 }
                 lex::Lex::Shi4Yi3 => Ok(Rvalue::Simple(data)),
-                _ => Err(Error::SomethingWentWrong),
+                _ => Err(Error::SomethingWentWrong(here!())),
             }
         }
-        _ => Err(Error::SomethingWentWrong),
+        _ => Err(Error::SomethingWentWrong(here!())),
     }
 }
 
@@ -418,12 +424,12 @@ fn parse_assign_after_xi1zhi1(mut iter: &mut LexIter<'_>) -> Result<Statement, E
                         rvalue,
                     })
                 } else {
-                    Err(Error::SomethingWentWrong)
+                    Err(Error::SomethingWentWrong(here!()))
                 }
             }
             lex::Lex::StringLiteral(lit) => unimplemented!("昔之 IDENTIFIER 之 STRING"),
             lex::Lex::Identifier(id) => unimplemented!("昔之 IDENTIFIER 之 IDENTIFIER 者"),
-            _ => Err(Error::SomethingWentWrong),
+            _ => Err(Error::SomethingWentWrong(here!())),
         },
         lex::Lex::Zhe3 => {
             let rvalue = parse_assign_after_zhe3(&mut iter)?;
@@ -435,7 +441,7 @@ fn parse_assign_after_xi1zhi1(mut iter: &mut LexIter<'_>) -> Result<Statement, E
                 rvalue,
             })
         }
-        _ => Err(Error::SomethingWentWrong),
+        _ => Err(Error::SomethingWentWrong(here!())),
     }
 }
 
@@ -452,19 +458,22 @@ fn parse_reference_statement_after_fu2(mut iter: &mut LexIter<'_>) -> Result<Sta
         Some(lex::Lex::Zhi1) => {
             // ('之' (STRING_LITERAL|INT_NUM|'其餘'|IDENTIFIER|'長'))?
             iter.next();
-            match iter.next().ok_or(Error::SomethingWentWrong)? {
+            match iter.next().ok_or(Error::SomethingWentWrong(here!()))? {
                 lex::Lex::StringLiteral(lit) => unimplemented!("夫 data 之 STRING_LITERAL"),
-                lex::Lex::IntNum(index) => Ok(Statement::ReferenceInd {
-                    data,
-                    index: interpret_intnum(&index),
+                lex::Lex::IntNum(index) => Ok(Statement::Reference {
+                    rvalue: RvalueNoQi2::Index(data, interpret_intnum(&index)),
                 }),
                 lex::Lex::Qi2Yu2 => unimplemented!("夫 data 之 其餘"),
                 lex::Lex::Identifier(ident) => unimplemented!("夫 data 之 IDENTIFIER"),
-                lex::Lex::Chang2 => unimplemented!("夫 data 之長"),
-                _ => Err(Error::SomethingWentWrong),
+                lex::Lex::Chang2 => Ok(Statement::Reference {
+                    rvalue: RvalueNoQi2::Length(data),
+                }),
+                _ => Err(Error::SomethingWentWrong(here!())),
             }
         }
-        _ => Ok(Statement::Reference { data }),
+        _ => Ok(Statement::Reference {
+            rvalue: RvalueNoQi2::Simple(data),
+        }),
     }
 }
 
@@ -483,7 +492,7 @@ fn parse_elseif(mut iter: &mut LexIter<'_>) -> Result<CondPlusStatements, Error>
             stmts.push(parse_statement(&mut iter)?);
         }
     } else {
-        Err(Error::SomethingWentWrong)
+        Err(Error::SomethingWentWrong(here!()))
     }
 }
 
@@ -562,10 +571,10 @@ fn parse_ifexpression_plus_zhe3(mut iter: &mut LexIter<'_>) -> Result<IfCond, Er
             let data2 = parse_data_or_qi2(&mut iter)?; // FIXME: the possibility of `(IDENTIFIER '之'('長'|STRING_LITERAL|IDENTIFIER))` is ignored
             match iter.next().ok_or(Error::UnexpectedEOF)? {
                 lex::Lex::Zhe3 => Ok(IfCond::Binary(data, *op, data2)),
-                _ => Err(Error::SomethingWentWrong),
+                _ => Err(Error::SomethingWentWrong(here!())),
             }
         }
-        _ => Err(Error::SomethingWentWrong),
+        _ => Err(Error::SomethingWentWrong(here!())),
     }
 }
 ///```
@@ -584,7 +593,7 @@ fn parse_arraypush_after_chong1(mut iter: &mut LexIter<'_>) -> Result<Statement,
             elems,
         })
     } else {
-        Err(Error::SomethingWentWrong)
+        Err(Error::SomethingWentWrong(here!()))
     }
 }
 
@@ -609,7 +618,7 @@ fn parse_arraycat_after_xian2(mut iter: &mut LexIter<'_>) -> Result<Statement, E
         }
         Ok(Statement::ArrayCat { append_to, elems })
     } else {
-        Err(Error::SomethingWentWrong)
+        Err(Error::SomethingWentWrong(here!()))
     }
 }
 
@@ -624,7 +633,7 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
                 let mut stmts = vec![];
                 loop {
                     if let lex::Lex::Yun2Yun2OrYe3(_) =
-                        iter.peek().ok_or(Error::SomethingWentWrong)?
+                        iter.peek().ok_or(Error::SomethingWentWrong(here!()))?
                     {
                         iter.next();
                         return Ok(Statement::ForArr { list, elem, stmts });
@@ -632,7 +641,7 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
                     stmts.push(parse_statement(&mut iter)?);
                 }
             } else {
-                Err(Error::SomethingWentWrong)
+                Err(Error::SomethingWentWrong(here!()))
             }
         }
         lex::Lex::Xian2 => parse_arraycat_after_xian2(&mut iter),
@@ -792,7 +801,7 @@ fn parse_after_wu2you3(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
                 _ => unimplemented!(), // 術, 物
             }
         }
-        _ => Err(Error::SomethingWentWrong),
+        _ => Err(Error::SomethingWentWrong(here!())),
     }
 }
 
@@ -809,7 +818,7 @@ fn parse_name_multi_statement_after_ming2zhi1(
     }
 
     if idents.is_empty() {
-        return Err(Error::SomethingWentWrong); // we need at least one 曰 now that we have seen 名之
+        return Err(Error::SomethingWentWrong(here!())); // we need at least one 曰 now that we have seen 名之
     }
 
     Ok(idents)

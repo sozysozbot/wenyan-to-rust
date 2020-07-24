@@ -444,7 +444,9 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             elseifcases,
             elsecase,
         } => compile_if(&mut env, ifcase, elseifcases, elsecase),
-        parse::Statement::Reference { data } => vec![(
+        parse::Statement::Reference {
+            rvalue: parse::RvalueNoQi2::Simple(data),
+        } => vec![(
             env.indent_level,
             format!(
                 "let _ans{} = {};",
@@ -452,13 +454,25 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
                 compile_literal(&env, data)
             ),
         )],
-        parse::Statement::ReferenceInd { data, index } => vec![(
+        parse::Statement::Reference {
+            rvalue: parse::RvalueNoQi2::Index(data, index),
+        } => vec![(
             env.indent_level,
             format!(
                 "let _ans{} = {}[{} - 1];",
                 get_new_unnamed_var(&mut env),
                 compile_literal(&env, data),
                 index
+            ),
+        )],
+        parse::Statement::Reference {
+            rvalue: parse::RvalueNoQi2::Length(data),
+        } => vec![(
+            env.indent_level,
+            format!(
+                "let _ans{} = {}.len();",
+                get_new_unnamed_var(&mut env),
+                compile_literal(&env, data),
             ),
         )],
         parse::Statement::NameMulti { idents } => compile_name_multi_statement(&mut env, &idents),
@@ -566,6 +580,7 @@ fn compile_rvalue(mut env: &mut Env, rvalue: &parse::Rvalue) -> String {
             format!("{}[{} - 1]", compile_dataorqi2(&mut env, data), index)
         }
         parse::Rvalue::Simple(data) => format!("{}", compile_dataorqi2(&mut env, data)),
+        parse::Rvalue::Length(data) => format!("{}.len()", compile_dataorqi2(&mut env, data)),
     }
 }
 

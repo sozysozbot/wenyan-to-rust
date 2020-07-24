@@ -175,12 +175,11 @@ impl IdentBiMap {
                     self.insert_stmt(&s, &conversion_table)
                 }
             }
-            parse::Statement::Reference { data } => {
-                self.insert_dat(data, &conversion_table);
-            }
-            parse::Statement::ReferenceInd { data, index: _ } => {
-                self.insert_dat(data, &conversion_table);
-            }
+            parse::Statement::Reference { rvalue } => match rvalue {
+                parse::RvalueNoQi2::Simple(data)
+                | parse::RvalueNoQi2::Index(data, _)
+                | parse::RvalueNoQi2::Length(data) => self.insert_dat(data, &conversion_table),
+            },
             parse::Statement::NameMulti { idents } => {
                 for id in idents {
                     self.insert_ident(&id, &conversion_table);
@@ -201,6 +200,14 @@ impl IdentBiMap {
                         ident,
                         opt_index: None,
                     },
+                rvalue: parse::Rvalue::Length(data),
+            }
+            | parse::Statement::Assignment {
+                lvalue:
+                    parse::Lvalue {
+                        ident,
+                        opt_index: None,
+                    },
                 rvalue: parse::Rvalue::Simple(data),
             }
             | parse::Statement::Assignment {
@@ -218,6 +225,14 @@ impl IdentBiMap {
                         opt_index: Some(_), // FIXME: need to consder this once the possibility of index being an identifier is added
                     },
                 rvalue: parse::Rvalue::Index(data, _),
+            }
+            | parse::Statement::Assignment {
+                lvalue:
+                    parse::Lvalue {
+                        ident,
+                        opt_index: Some(_), // FIXME: need to consder this once the possibility of index being an identifier is added
+                    },
+                rvalue: parse::Rvalue::Length(data),
             } => {
                 self.insert_ident(&ident, &conversion_table);
                 self.mutable_idents.insert(ident.clone());
