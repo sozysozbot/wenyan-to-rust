@@ -598,7 +598,9 @@ fn compile_rvalue(mut env: &mut Env, rvalue: &parse::Rvalue) -> String {
             format!("{}[{} - 1]", compile_dataorqi2(&mut env, data), index)
         }
         parse::Rvalue::Simple(data) => format!("{}", compile_dataorqi2(&mut env, data)),
-        parse::Rvalue::Length(data) => format!("({}.len() as f64)", compile_dataorqi2(&mut env, data)),
+        parse::Rvalue::Length(data) => {
+            format!("({}.len() as f64)", compile_dataorqi2(&mut env, data))
+        }
     }
 }
 
