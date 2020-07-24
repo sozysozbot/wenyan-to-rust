@@ -108,11 +108,7 @@ fn compile_define(
                     env.indent_level,
                     format!(
                         "let {}{} = {};",
-                        if env.ident_map.is_mutable(&ident) {
-                            "mut "
-                        } else {
-                            ""
-                        },
+                        ifmutable_thenmut(&env, &ident),
                         env.ident_map.translate_from_hanzi(&ident),
                         compile_optional_literal(&env, data_arr.get(i), *type_)
                     ),
@@ -303,38 +299,28 @@ fn compile_math_binary(
 fn compile_name_multi_statement(mut env: &mut Env, idents: &[parse::Identifier]) -> Vec<Line> {
     let mut res = vec![];
     for i in 0..idents.len() {
-        if env.variables_not_yet_named.len() + i < idents.len() {
-            // negative index is to be filled with undefined
-            res.push((
-                env.indent_level,
+        res.push((
+            env.indent_level,
+            if env.variables_not_yet_named.len() + i < idents.len() {
+                // negative index is to be filled with undefined
                 format!(
                     "let {}{} : (); // undefined",
-                    if env.ident_map.is_mutable(&idents[i]) {
-                        "mut "
-                    } else {
-                        ""
-                    },
+                    ifmutable_thenmut(&env, &idents[i]),
                     env.ident_map.translate_from_hanzi(&idents[i])
-                ),
-            ));
-        } else {
-            let tmpvarname = env.variables_not_yet_named
-                [env.variables_not_yet_named.len() + i - idents.len()]
-            .clone();
-            res.push((
-                env.indent_level,
+                )
+            } else {
+                let tmpvarname = env.variables_not_yet_named
+                    [env.variables_not_yet_named.len() + i - idents.len()]
+                .clone();
+
                 format!(
                     "let {}{} = {};",
-                    if env.ident_map.is_mutable(&idents[i]) {
-                        "mut "
-                    } else {
-                        ""
-                    },
+                    ifmutable_thenmut(&env, &idents[i]),
                     env.ident_map.translate_from_hanzi(&idents[i]),
                     tmpvarname.clone()
-                ),
-            ));
-        }
+                )
+            },
+        ));
     }
     if env.variables_not_yet_named.len() > idents.len() {
         env.variables_not_yet_named
@@ -524,84 +510,12 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             env.variables_not_yet_named = vec![];
             return vec![(env.indent_level, r)];
         }
-        parse::Statement::Assignment {
-            lvalue:
-                parse::Lvalue {
-                    ident,
-                    opt_index: None,
-                },
-            rvalue:
-                parse::Rvalue {
-                    data,
-                    opt_index: None,
-                },
-        } => vec![(
+        parse::Statement::Assignment { lvalue, rvalue } => vec![(
             env.indent_level,
             format!(
                 "{} = {};",
-                env.ident_map.translate_from_hanzi(&ident),
-                compile_dataorqi2(&mut env, data)
-            ),
-        )],
-        parse::Statement::Assignment {
-            lvalue:
-                parse::Lvalue {
-                    ident,
-                    opt_index: None,
-                },
-            rvalue:
-                parse::Rvalue {
-                    data,
-                    opt_index: Some(ind),
-                },
-        } => vec![(
-            env.indent_level,
-            format!(
-                "{} = {}[{} - 1];",
-                env.ident_map.translate_from_hanzi(&ident),
-                compile_dataorqi2(&mut env, data),
-                ind
-            ),
-        )],
-        parse::Statement::Assignment {
-            lvalue:
-                parse::Lvalue {
-                    ident,
-                    opt_index: Some(index),
-                },
-            rvalue:
-                parse::Rvalue {
-                    data,
-                    opt_index: None,
-                },
-        } => vec![(
-            env.indent_level,
-            format!(
-                "{}[{} - 1] = {};",
-                env.ident_map.translate_from_hanzi(&ident),
-                index,
-                compile_dataorqi2(&mut env, data),
-            ),
-        )],
-        parse::Statement::Assignment {
-            lvalue:
-                parse::Lvalue {
-                    ident,
-                    opt_index: Some(index),
-                },
-            rvalue:
-                parse::Rvalue {
-                    data,
-                    opt_index: Some(ind),
-                },
-        } => vec![(
-            env.indent_level,
-            format!(
-                "{}[{} - 1] = {}[{} - 1];",
-                env.ident_map.translate_from_hanzi(&ident),
-                index,
-                compile_dataorqi2(&mut env, data),
-                ind
+                compile_lvalue(&env, lvalue),
+                compile_rvalue(&mut env, rvalue),
             ),
         )],
         parse::Statement::InitDefine { type_, data, name } => vec![(
@@ -638,6 +552,36 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             r
         }
         parse::Statement::Loop { statements } => compile_loop(&mut env, statements),
+    }
+}
+
+fn compile_lvalue(env: &Env, lvalue: &parse::Lvalue) -> String {
+    match lvalue {
+        parse::Lvalue {
+            ident,
+            opt_index: Some(index),
+        } => format!(
+            "{}[{} - 1]",
+            env.ident_map.translate_from_hanzi(&ident),
+            index
+        ),
+        parse::Lvalue {
+            ident,
+            opt_index: None,
+        } => format!("{}", env.ident_map.translate_from_hanzi(&ident),),
+    }
+}
+
+fn compile_rvalue(mut env: &mut Env, rvalue: &parse::Rvalue) -> String {
+    match rvalue {
+        parse::Rvalue {
+            data,
+            opt_index: Some(index),
+        } => format!("{}[{} - 1]", compile_dataorqi2(&mut env, data), index),
+        parse::Rvalue {
+            data,
+            opt_index: None,
+        } => format!("{}", compile_dataorqi2(&mut env, data)),
     }
 }
 
