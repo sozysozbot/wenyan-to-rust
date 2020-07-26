@@ -270,7 +270,9 @@ impl IdentBiMap {
                 self.insert_ident(&name, &conversion_table)
             }
             parse::Statement::ForEnumIdent { ident, statements } => {
-                self.insert_ident(&ident, &conversion_table);
+                if let parse::IdentOrQi2::Ident(i) = ident {
+                    self.insert_ident(&i, &conversion_table);
+                }
                 self.insert_stmts(&statements, &conversion_table)
             }
             parse::Statement::Define {

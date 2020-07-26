@@ -120,42 +120,13 @@ fn compile_define(
     ans
 }
 
-fn compile_forenum(env: &Env, num: i64, statements: &[parse::Statement]) -> Vec<Line> {
-    let mut inner = vec![];
-    let mut new_env = Env {
-        indent_level: env.indent_level + 1,
-        rand_counter: env.rand_counter,
-        ans_counter: env.ans_counter,
-        ident_map: env.ident_map.clone(),
-
-        /// variables_not_yet_named must be inherited, since in the original compiler
-        ///
-        /// ```
-        /// 吾有二言。曰「「天地。」」。
-        /// 為是三遍。
-        /// 書之。
-        /// 吾有一言。曰「「問天地好在。」」。書之。
-        /// 云云。
-        /// ```
-        ///
-        /// is translated into
-        ///
-        /// ```
-        /// var _ans1 = "天地。";
-        /// var _ans2 = "";
-        /// for (let _rand1 = 0; _rand1 < 3; _rand1++) {
-        ///   console.log(_ans1, _ans2);
-        ///   var _ans3 = "問天地好在。";
-        ///   console.log(_ans3);
-        /// };
-        /// ```
-        variables_not_yet_named: env.variables_not_yet_named.clone(),
-    };
-    for st in statements {
-        inner.append(&mut compile_statement(&mut new_env, &st));
-    }
+fn compile_forenum(mut env: &mut Env, num: i64, statements: &[parse::Statement]) -> Vec<Line> {
     let mut r = vec![(env.indent_level, format!("for _ in 0..{} {{", num,))];
-    r.append(&mut inner);
+    env.indent_level += 1;
+    for st in statements {
+        r.append(&mut compile_statement(&mut env, &st));
+    }
+    env.indent_level -= 1;
     r.push((env.indent_level, "}".to_string()));
     r
 }
@@ -556,7 +527,7 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             ),
         )],
         parse::Statement::Define { decl, idents } => compile_define(&mut env, decl, &idents),
-        parse::Statement::ForEnum { num, statements } => compile_forenum(&env, *num, &statements),
+        parse::Statement::ForEnum { num, statements } => compile_forenum(&mut env, *num, &statements),
         parse::Statement::ForEnumIdent { ident, statements } => {
             compile_forenum_ident(&mut env, ident, statements)
         }
@@ -624,14 +595,11 @@ fn ifmutable_thenmut(env: &Env, name: &parse::Identifier) -> &'static str {
 
 fn compile_forenum_ident(
     mut env: &mut Env,
-    ident: &parse::Identifier,
+    ident: &parse::IdentOrQi2,
     statements: &[parse::Statement],
 ) -> Vec<Line> {
-    let mut inner = vec![];
     env.rand_counter += 1;
     let rand_n = env.rand_counter;
-
-    compile_indent(&mut env, &mut inner, statements);
     let mut r = vec![
         (env.indent_level, format!("let mut _rand{} = 0.0;", rand_n,)),
         (
@@ -639,11 +607,11 @@ fn compile_forenum_ident(
             format!(
                 "while _rand{} < {} {{",
                 rand_n,
-                env.ident_map.translate_from_hanzi(&ident),
+                compile_dataorqi2(&mut env, &parse::DataOrQi2::from(ident)),
             ),
         ),
     ];
-    r.append(&mut inner);
+    compile_indent(&mut env, &mut r, statements);
     r.append(&mut vec![
         (env.indent_level + 1, format!("_rand{} += 1.0;", rand_n,)),
         (env.indent_level, "}".to_string()),

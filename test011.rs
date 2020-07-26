@@ -4,7 +4,7 @@ fn main() {
         println!("{}", _ans1);
     }
     for _ in 0..1000 {
-        let _ans1 = "問天地好在。";
-        println!("{}", _ans1);
+        let _ans2 = "問天地好在。";
+        println!("{}", _ans2);
     }
 }

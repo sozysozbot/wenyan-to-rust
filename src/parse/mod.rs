@@ -32,7 +32,7 @@ pub enum Statement {
         statements: Vec<Statement>,
     },
     ForEnumIdent {
-        ident: Identifier,
+        ident: IdentOrQi2,
         statements: Vec<Statement>,
     },
     ForArr {
@@ -356,7 +356,27 @@ fn parse_for_enum_statement_after_wei2shi4(mut iter: &mut LexIter<'_>) -> Result
                     inner.push(parse_statement(&mut iter)?);
                 }
                 Ok(Statement::ForEnumIdent {
-                    ident: Identifier(ident.to_string()),
+                    ident: IdentOrQi2::Ident (Identifier(ident.to_string())),
+                    statements: inner,
+                })
+            }
+            _ => Err(Error::SomethingWentWrong(here!())),
+        },
+
+        // not found in spec.html
+        lex::Lex::Qi2 => match iter.next().ok_or(Error::UnexpectedEOF)? {
+            lex::Lex::Bian4Loop => {
+                let mut inner = vec![];
+                loop {
+                    if let Some(&&lex::Lex::Yun2Yun2OrYe3(_)) = iter.peek() {
+                        iter.next();
+                        break;
+                    }
+
+                    inner.push(parse_statement(&mut iter)?);
+                }
+                Ok(Statement::ForEnumIdent {
+                    ident: IdentOrQi2::Qi2,
                     statements: inner,
                 })
             }

@@ -11,6 +11,6 @@ fn main() {
         let _ans3 = YI3 + JIA3;
         YI3 = _ans3;
     }
-    let _ans1 = YI3;
-    println!("{}", _ans1);
+    let _ans4 = YI3;
+    println!("{}", _ans4);
 }
