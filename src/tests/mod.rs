@@ -374,10 +374,24 @@ fn test083() {
 fn test084() {
     test("test084")
 }
-/// note that fail000.rs currently does not compile as a valid Rust program, for two reasons:
+/// note that fail000.rs currently does not compile as a valid Rust program because of:
 /// * `{}` on `Vec<f64>`
 /// * ownership
 #[test]
 fn fail000() {
     test("fail000")
+}
+
+/// note that fail001.rs currently does not compile as a valid Rust program because of:
+/// * `{}` on `Vec<f64>`
+#[test]
+fn fail001() {
+    test("fail001")
+}
+
+/// note that fail002.rs currently does not compile as a valid Rust program because of:
+/// * `{}` on `Vec<f64>`
+#[test]
+fn fail002() {
+    test("fail002")
 }
