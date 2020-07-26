@@ -136,23 +136,39 @@ impl IdentBiMap {
             }
         }
     }
+    fn insert_rvalue(&mut self, rv: &parse::Rvalue, conversion_table: &Table) {
+        match rv {
+            parse::Rvalue::Index(data, _)
+            | parse::Rvalue::Length(data)
+            | parse::Rvalue::Simple(data) => self.insert_data_or_qi2(data, &conversion_table),
+        }
+    }
+    fn insert_idents(&mut self, idents: &[parse::Identifier], conversion_table: &Table) {
+        for ident in idents {
+            self.insert_ident(&ident, &conversion_table)
+        }
+    }
+    fn insert_dats(&mut self, data_arr: &[parse::Data], conversion_table: &Table) {
+        for dat in data_arr {
+            self.insert_dat(dat, &conversion_table);
+        }
+    }
     fn insert_stmt(&mut self, st: &parse::Statement, conversion_table: &Table) {
+        use parse::Statement::*;
         match st {
-            parse::Statement::ReferenceWhatIsLeft { data } => {
+            ReferenceWhatIsLeft { data } => {
                 self.insert_dat(&data, &conversion_table);
             }
-            parse::Statement::ForArr { list, elem, stmts } => {
+            ForArr { list, elem, stmts } => {
                 self.insert_ident(&list, &conversion_table);
                 self.insert_ident(&elem, &conversion_table);
                 self.insert_stmts(&stmts, &conversion_table)
             }
-            parse::Statement::ArrayCat { append_to, elems } => {
+            ArrayCat { append_to, elems } => {
                 self.insert_data_or_qi2(&parse::DataOrQi2::from(append_to), &conversion_table);
-                for ident in elems {
-                    self.insert_ident(&ident, &conversion_table)
-                }
+                self.insert_idents(&elems, &conversion_table)
             }
-            parse::Statement::ArrayFill {
+            ArrayFill {
                 what_to_fill,
                 elems,
             } => {
@@ -160,108 +176,55 @@ impl IdentBiMap {
                 if let parse::IdentOrQi2::Ident(ident) = what_to_fill {
                     self.mutable_idents.insert(ident.clone());
                 }
-                for e in elems {
-                    self.insert_dat(&e, &conversion_table);
-                }
+                self.insert_dats(&elems, &conversion_table);
             }
-            parse::Statement::If {
+            If {
                 ifcase: (ifexpr, ifcase),
                 elseifcases,
                 elsecase,
             } => {
                 self.insert_ifexpr(ifexpr, &conversion_table);
-                for s in ifcase {
-                    self.insert_stmt(&s, &conversion_table)
-                }
+                self.insert_stmts(&ifcase, &conversion_table);
                 for (elseifexpr, elseifcase) in elseifcases {
                     self.insert_ifexpr(elseifexpr, &conversion_table);
-                    for s in elseifcase {
-                        self.insert_stmt(&s, &conversion_table)
-                    }
+                    self.insert_stmts(&elseifcase, &conversion_table)
                 }
-                for s in elsecase {
-                    self.insert_stmt(&s, &conversion_table)
-                }
+                self.insert_stmts(&elsecase, &conversion_table)
             }
-            parse::Statement::Reference { rvalue } => {
-                self.insert_rvaluenoqi2(rvalue, &conversion_table)
+            Reference { rvalue } => self.insert_rvaluenoqi2(rvalue, &conversion_table),
+            NameMulti { idents } => self.insert_idents(&idents, &conversion_table),
+            Math { math } => self.insert_math(math, &conversion_table),
+            Assignment {
+                lvalue: parse::Lvalue::Simple(ident),
+                rvalue,
             }
-            parse::Statement::NameMulti { idents } => {
-                for id in idents {
-                    self.insert_ident(&id, &conversion_table);
-                }
-            }
-            parse::Statement::Math { math } => self.insert_math(math, &conversion_table),
-            parse::Statement::Assignment {
-                lvalue:
-                    parse::Lvalue {
-                        ident,
-                        opt_index: None,
-                    },
-                rvalue: parse::Rvalue::Index(data, _),
-            }
-            | parse::Statement::Assignment {
-                lvalue:
-                    parse::Lvalue {
-                        ident,
-                        opt_index: None,
-                    },
-                rvalue: parse::Rvalue::Length(data),
-            }
-            | parse::Statement::Assignment {
-                lvalue:
-                    parse::Lvalue {
-                        ident,
-                        opt_index: None,
-                    },
-                rvalue: parse::Rvalue::Simple(data),
-            }
-            | parse::Statement::Assignment {
-                lvalue:
-                    parse::Lvalue {
-                        ident,
-                        opt_index: Some(_), // FIXME: need to consder this once the possibility of index being an identifier is added
-                    },
-                rvalue: parse::Rvalue::Simple(data),
-            }
-            | parse::Statement::Assignment {
-                lvalue:
-                    parse::Lvalue {
-                        ident,
-                        opt_index: Some(_), // FIXME: need to consder this once the possibility of index being an identifier is added
-                    },
-                rvalue: parse::Rvalue::Index(data, _),
-            }
-            | parse::Statement::Assignment {
-                lvalue:
-                    parse::Lvalue {
-                        ident,
-                        opt_index: Some(_), // FIXME: need to consder this once the possibility of index being an identifier is added
-                    },
-                rvalue: parse::Rvalue::Length(data),
+            | Assignment {
+                lvalue: parse::Lvalue::Index(ident, _),
+                rvalue,
             } => {
                 self.insert_ident(&ident, &conversion_table);
                 self.mutable_idents.insert(ident.clone());
-                self.insert_data_or_qi2(data, &conversion_table)
+                self.insert_rvalue(rvalue, &conversion_table)
             }
-            parse::Statement::Print
-            | parse::Statement::Flush
-            | parse::Statement::Break
-            | parse::Statement::Continue => {}
-            parse::Statement::ForEnum { statements, num: _ }
-            | parse::Statement::Loop { statements } => {
+            Assignment {
+                lvalue: parse::Lvalue::IndexByIdent(ident, index),
+                rvalue,
+            } => {
+                self.insert_ident(&ident, &conversion_table);
+                self.mutable_idents.insert(ident.clone());
+                self.insert_ident(&index, &conversion_table);
+                self.insert_rvalue(rvalue, &conversion_table)
+            }
+            Print | Flush | Break | Continue => {}
+            ForEnum { statements, num: _ } | Loop { statements } => {
                 self.insert_stmts(&statements, &conversion_table)
             }
-            parse::Statement::Declare(parse::DeclareStatement {
+            Declare(parse::DeclareStatement {
                 how_many_variables: _,
                 type_: _,
                 data_arr,
-            }) => {
-                for dat in data_arr {
-                    self.insert_dat(dat, &conversion_table);
-                }
-            }
-            parse::Statement::InitDefine {
+            }) => self.insert_dats(data_arr, &conversion_table),
+            InitDefine {
                 name,
                 type_: _,
                 data: dat,
@@ -269,13 +232,13 @@ impl IdentBiMap {
                 self.insert_dat(dat, &conversion_table);
                 self.insert_ident(&name, &conversion_table)
             }
-            parse::Statement::ForEnumIdent { ident, statements } => {
+            ForEnumIdent { ident, statements } => {
                 if let parse::IdentOrQi2::Ident(i) = ident {
                     self.insert_ident(&i, &conversion_table);
                 }
                 self.insert_stmts(&statements, &conversion_table)
             }
-            parse::Statement::Define {
+            Define {
                 idents,
                 decl:
                     parse::DeclareStatement {
@@ -284,12 +247,8 @@ impl IdentBiMap {
                         data_arr,
                     },
             } => {
-                for dat in data_arr {
-                    self.insert_dat(dat, &conversion_table);
-                }
-                for ident in idents {
-                    self.insert_ident(&ident, &conversion_table)
-                }
+                self.insert_dats(data_arr, &conversion_table);
+                self.insert_idents(&idents, &conversion_table)
             }
         }
     }

@@ -3,9 +3,10 @@ type LexIter<'a> = peek_nth::PeekableNth<std::slice::Iter<'a, lex::Lex>>;
 pub type CondPlusStatements = (IfCond, Vec<Statement>);
 
 #[derive(Debug)]
-pub struct Lvalue {
-    pub ident: Identifier,
-    pub opt_index: Option<i64>,
+pub enum Lvalue {
+    Simple(Identifier),
+    Index(Identifier, i64),
+    IndexByIdent(Identifier, Identifier),
 }
 
 #[derive(Debug)]
@@ -447,10 +448,7 @@ fn parse_assign_after_xi1zhi1(mut iter: &mut LexIter<'_>) -> Result<Statement, E
                 if let lex::Lex::Zhe3 = iter.next().ok_or(Error::UnexpectedEOF)? {
                     let rvalue = parse_assign_after_zhe3(&mut iter)?;
                     Ok(Statement::Assignment {
-                        lvalue: Lvalue {
-                            ident,
-                            opt_index: Some(interpret_intnum(&int_num)),
-                        },
+                        lvalue: Lvalue::Index(ident, interpret_intnum(&int_num)),
                         rvalue,
                     })
                 } else {
@@ -458,16 +456,23 @@ fn parse_assign_after_xi1zhi1(mut iter: &mut LexIter<'_>) -> Result<Statement, E
                 }
             }
             lex::Lex::StringLiteral(lit) => unimplemented!("昔之 IDENTIFIER 之 STRING"),
-            lex::Lex::Identifier(id) => unimplemented!("昔之 IDENTIFIER 之 IDENTIFIER 者"),
+            lex::Lex::Identifier(id) => {
+                if let lex::Lex::Zhe3 = iter.next().ok_or(Error::UnexpectedEOF)? {
+                    let rvalue = parse_assign_after_zhe3(&mut iter)?;
+                    Ok(Statement::Assignment {
+                        lvalue: Lvalue::IndexByIdent(ident, Identifier(id.to_string())),
+                        rvalue,
+                    })
+                } else {
+                    Err(Error::SomethingWentWrong(here!()))
+                }
+            }
             _ => Err(Error::SomethingWentWrong(here!())),
         },
         lex::Lex::Zhe3 => {
             let rvalue = parse_assign_after_zhe3(&mut iter)?;
             Ok(Statement::Assignment {
-                lvalue: Lvalue {
-                    ident,
-                    opt_index: None,
-                },
+                lvalue: Lvalue::Simple(ident),
                 rvalue,
             })
         }

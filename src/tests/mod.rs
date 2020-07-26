@@ -395,3 +395,11 @@ fn fail001() {
 fn fail002() {
     test("fail002")
 }
+
+/// note that fail003.rs currently does not compile as a valid Rust program because of:
+/// * `{}` on `Vec<f64>`
+/// * ownership
+#[test]
+fn fail003() {
+    test("fail003")
+}

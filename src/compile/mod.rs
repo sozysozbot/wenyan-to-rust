@@ -560,18 +560,17 @@ fn compile_indent(mut env: &mut Env, r: &mut Vec<Line>, stmts: &[parse::Statemen
 
 fn compile_lvalue(env: &Env, lvalue: &parse::Lvalue) -> String {
     match lvalue {
-        parse::Lvalue {
-            ident,
-            opt_index: Some(index),
-        } => format!(
+        parse::Lvalue::Index(ident, index) => format!(
             "{}[{} - 1]",
             env.ident_map.translate_from_hanzi(&ident),
             index
         ),
-        parse::Lvalue {
-            ident,
-            opt_index: None,
-        } => env.ident_map.translate_from_hanzi(&ident),
+        parse::Lvalue::Simple(ident) => env.ident_map.translate_from_hanzi(&ident),
+        parse::Lvalue::IndexByIdent(ident, index) => format!(
+            "{}[({} as usize) - 1]",
+            env.ident_map.translate_from_hanzi(&ident),
+            env.ident_map.translate_from_hanzi(&index),
+        ),
     }
 }
 
