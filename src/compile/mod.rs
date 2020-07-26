@@ -527,7 +527,9 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             ),
         )],
         parse::Statement::Define { decl, idents } => compile_define(&mut env, decl, &idents),
-        parse::Statement::ForEnum { num, statements } => compile_forenum(&mut env, *num, &statements),
+        parse::Statement::ForEnum { num, statements } => {
+            compile_forenum(&mut env, *num, &statements)
+        }
         parse::Statement::ForEnumIdent { ident, statements } => {
             compile_forenum_ident(&mut env, ident, statements)
         }
@@ -569,7 +571,7 @@ fn compile_lvalue(env: &Env, lvalue: &parse::Lvalue) -> String {
         parse::Lvalue {
             ident,
             opt_index: None,
-        } => format!("{}", env.ident_map.translate_from_hanzi(&ident),),
+        } => env.ident_map.translate_from_hanzi(&ident),
     }
 }
 
@@ -578,7 +580,7 @@ fn compile_rvalue(mut env: &mut Env, rvalue: &parse::Rvalue) -> String {
         parse::Rvalue::Index(data, index) => {
             format!("{}[{} - 1]", compile_dataorqi2(&mut env, data), index)
         }
-        parse::Rvalue::Simple(data) => format!("{}", compile_dataorqi2(&mut env, data)),
+        parse::Rvalue::Simple(data) => compile_dataorqi2(&mut env, data),
         parse::Rvalue::Length(data) => {
             format!("({}.len() as f64)", compile_dataorqi2(&mut env, data))
         }

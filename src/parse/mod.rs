@@ -356,7 +356,7 @@ fn parse_for_enum_statement_after_wei2shi4(mut iter: &mut LexIter<'_>) -> Result
                     inner.push(parse_statement(&mut iter)?);
                 }
                 Ok(Statement::ForEnumIdent {
-                    ident: IdentOrQi2::Ident (Identifier(ident.to_string())),
+                    ident: IdentOrQi2::Ident(Identifier(ident.to_string())),
                     statements: inner,
                 })
             }
@@ -488,7 +488,10 @@ fn parse_reference_statement_after_fu2(mut iter: &mut LexIter<'_>) -> Result<Sta
         Some(lex::Lex::Zhi1) => {
             // ('之' (STRING_LITERAL|INT_NUM|'其餘'|IDENTIFIER|'長'))?
             iter.next();
-            match iter.next().ok_or(Error::SomethingWentWrong(here!()))? {
+            match iter
+                .next()
+                .ok_or_else(|| Error::SomethingWentWrong(here!()))?
+            {
                 lex::Lex::StringLiteral(lit) => unimplemented!("夫 data 之 STRING_LITERAL"),
                 lex::Lex::IntNum(index) => Ok(Statement::Reference {
                     rvalue: RvalueNoQi2::Index(data, interpret_intnum(&index)),
@@ -543,9 +546,13 @@ fn parse_after_ruo4fei1(mut iter: &mut LexIter<'_>) -> Result<Vec<Statement>, Er
     }
 }
 
-fn parse_if_statement_after_zhe3(
-    mut iter: &mut LexIter<'_>,
-) -> Result<(Vec<Statement>, Vec<CondPlusStatements>, Vec<Statement>), Error> {
+struct IfStmtAfterZhe3 {
+    ifstmts: Vec<Statement>,
+    elseifcases: Vec<CondPlusStatements>,
+    elsecase: Vec<Statement>,
+}
+
+fn parse_if_statement_after_zhe3(mut iter: &mut LexIter<'_>) -> Result<IfStmtAfterZhe3, Error> {
     // FIXME:
     // currently: statement+ ('若非' statement+)? FOR_IF_END ;
     // want: statement+ ('或若' if_expression '者' statement+)* ('若非' statement+)? FOR_IF_END ;
@@ -559,12 +566,20 @@ fn parse_if_statement_after_zhe3(
                     match iter.peek() {
                         Some(lex::Lex::Yun2Yun2OrYe3(_)) => {
                             iter.next();
-                            return Ok((ifcase, condstmt_vec, vec![]));
+                            return Ok(IfStmtAfterZhe3 {
+                                ifstmts: ifcase,
+                                elseifcases: condstmt_vec,
+                                elsecase: vec![],
+                            });
                         }
                         Some(lex::Lex::Huo4Ruo4) => {}
                         Some(lex::Lex::Ruo4Fei1) => {
                             iter.next();
-                            return Ok((ifcase, condstmt_vec, parse_after_ruo4fei1(&mut iter)?));
+                            return Ok(IfStmtAfterZhe3 {
+                                ifstmts: ifcase,
+                                elseifcases: condstmt_vec,
+                                elsecase: parse_after_ruo4fei1(&mut iter)?,
+                            });
                         }
                         _ => unreachable!(),
                     }
@@ -573,11 +588,19 @@ fn parse_if_statement_after_zhe3(
             }
             Some(lex::Lex::Ruo4Fei1) => {
                 iter.next();
-                return Ok((ifcase, vec![], parse_after_ruo4fei1(&mut iter)?));
+                return Ok(IfStmtAfterZhe3 {
+                    ifstmts: ifcase,
+                    elseifcases: vec![],
+                    elsecase: parse_after_ruo4fei1(&mut iter)?,
+                });
             }
             Some(lex::Lex::Yun2Yun2OrYe3(_)) => {
                 iter.next();
-                return Ok((ifcase, vec![], vec![]));
+                return Ok(IfStmtAfterZhe3 {
+                    ifstmts: ifcase,
+                    elseifcases: vec![],
+                    elsecase: vec![],
+                });
             }
             None => return Err(Error::UnexpectedEOF),
             Some(..) => {}
@@ -695,8 +718,9 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
                 let elem = parse_identifier(&mut iter)?;
                 let mut stmts = vec![];
                 loop {
-                    if let lex::Lex::Yun2Yun2OrYe3(_) =
-                        iter.peek().ok_or(Error::SomethingWentWrong(here!()))?
+                    if let lex::Lex::Yun2Yun2OrYe3(_) = iter
+                        .peek()
+                        .ok_or_else(|| Error::SomethingWentWrong(here!()))?
                     {
                         iter.next();
                         return Ok(Statement::ForArr { list, elem, stmts });
@@ -710,7 +734,11 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
         lex::Lex::Xian2 => parse_arraycat_after_xian2(&mut iter),
         lex::Lex::Chong1 => parse_arraypush_after_chong1(&mut iter),
         lex::Lex::Ruo4Qi2Bu4Ran2Zhe3 => {
-            let (ifstmts, elseifcases, elsecase) = parse_if_statement_after_zhe3(&mut iter)?;
+            let IfStmtAfterZhe3 {
+                ifstmts,
+                elseifcases,
+                elsecase,
+            } = parse_if_statement_after_zhe3(&mut iter)?;
             Ok(Statement::If {
                 ifcase: (IfCond::NotQi2, ifstmts),
                 elseifcases,
@@ -718,7 +746,11 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
             })
         }
         lex::Lex::Ruo4Qi2Ran2Zhe3 => {
-            let (ifstmts, elseifcases, elsecase) = parse_if_statement_after_zhe3(&mut iter)?;
+            let IfStmtAfterZhe3 {
+                ifstmts,
+                elseifcases,
+                elsecase,
+            } = parse_if_statement_after_zhe3(&mut iter)?;
             Ok(Statement::If {
                 ifcase: (IfCond::Unary(UnaryIfExpr::Simple(DataOrQi2::Qi2)), ifstmts),
                 elseifcases,
@@ -728,7 +760,11 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
         lex::Lex::Ruo4 => {
             // if_statement                : '若' if_expression '者' statement+ ('或若' if_expression '者' statement+)* ('若非' statement+)? FOR_IF_END ;
             let ifexpr = parse_ifexpression_plus_zhe3(&mut iter)?;
-            let (ifstmts, elseifcases, elsecase) = parse_if_statement_after_zhe3(&mut iter)?;
+            let IfStmtAfterZhe3 {
+                ifstmts,
+                elseifcases,
+                elsecase,
+            } = parse_if_statement_after_zhe3(&mut iter)?;
             Ok(Statement::If {
                 ifcase: (ifexpr, ifstmts),
                 elseifcases,
