@@ -552,6 +552,21 @@ struct IfStmtAfterZhe3 {
     elsecase: Vec<Statement>,
 }
 
+impl IfStmtAfterZhe3 {
+    pub fn to_stmt_with_cond(self, cond: IfCond) -> Statement {
+        let IfStmtAfterZhe3 {
+            ifstmts,
+            elseifcases,
+            elsecase,
+        } = self;
+        Statement::If {
+            ifcase: (cond, ifstmts),
+            elseifcases,
+            elsecase,
+        }
+    }
+}
+
 fn parse_if_statement_after_zhe3(mut iter: &mut LexIter<'_>) -> Result<IfStmtAfterZhe3, Error> {
     // FIXME:
     // currently: statement+ ('若非' statement+)? FOR_IF_END ;
@@ -734,29 +749,10 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
         lex::Lex::Xian2 => parse_arraycat_after_xian2(&mut iter),
         lex::Lex::Chong1 => parse_arraypush_after_chong1(&mut iter),
         lex::Lex::Ruo4Qi2Bu4Ran2Zhe3 => {
-            let IfStmtAfterZhe3 {
-                ifstmts,
-                elseifcases,
-                elsecase,
-            } = parse_if_statement_after_zhe3(&mut iter)?;
-            Ok(Statement::If {
-                ifcase: (IfCond::NotQi2, ifstmts),
-                elseifcases,
-                elsecase,
-            })
+            Ok(parse_if_statement_after_zhe3(&mut iter)?.to_stmt_with_cond(IfCond::NotQi2))
         }
-        lex::Lex::Ruo4Qi2Ran2Zhe3 => {
-            let IfStmtAfterZhe3 {
-                ifstmts,
-                elseifcases,
-                elsecase,
-            } = parse_if_statement_after_zhe3(&mut iter)?;
-            Ok(Statement::If {
-                ifcase: (IfCond::Unary(UnaryIfExpr::Simple(DataOrQi2::Qi2)), ifstmts),
-                elseifcases,
-                elsecase,
-            })
-        }
+        lex::Lex::Ruo4Qi2Ran2Zhe3 => Ok(parse_if_statement_after_zhe3(&mut iter)?
+            .to_stmt_with_cond(IfCond::Unary(UnaryIfExpr::Simple(DataOrQi2::Qi2)))),
         lex::Lex::Ruo4 => {
             // if_statement                : '若' if_expression '者' statement+ ('或若' if_expression '者' statement+)* ('若非' statement+)? FOR_IF_END ;
             let ifexpr = parse_ifexpression_plus_zhe3(&mut iter)?;
