@@ -3,6 +3,12 @@
 ## current status
 Can compile all the samples in [明義第一](https://github.com/wenyan-lang/book/blob/master/01%20%E6%98%8E%E7%BE%A9%E7%AC%AC%E4%B8%80.md), [變數第二](https://github.com/wenyan-lang/book/blob/master/02%20%E8%AE%8A%E6%95%B8%E7%AC%AC%E4%BA%8C.md), [算術第三](https://github.com/wenyan-lang/book/blob/master/03%20%E7%AE%97%E8%A1%93%E7%AC%AC%E4%B8%89.md), [決策第四](https://github.com/wenyan-lang/book/blob/master/04%20%E6%B1%BA%E7%AD%96%E7%AC%AC%E5%9B%9B.md) and [循環第五](https://github.com/wenyan-lang/book/blob/master/05%20%E5%BE%AA%E7%92%B0%E7%AC%AC%E4%BA%94.md).
 
+## known problems
+* must change the `println!` into a custom function, in order to:
+    * print the numbers in Hanzi
+    * print the array (note that test081.rs currently does not compile as a valid Rust program)
+
+
 ## samples
 
 ### test006.wy
@@ -199,7 +205,4 @@ fn main() {
     }
 }
 ```
-
-## todo
-* `println!` the numbers in Hanzi
 

@@ -358,3 +358,9 @@ fn test079() {
 fn test080() {
     test("test080")
 }
+
+/// note that test081.rs currently does not compile as a valid Rust program")
+#[test]
+fn test081() {
+    test("test081")
+}
