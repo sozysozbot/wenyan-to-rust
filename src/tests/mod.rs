@@ -359,8 +359,10 @@ fn test080() {
     test("test080")
 }
 
-/// note that test081.rs currently does not compile as a valid Rust program")
+/// note that fail000.rs currently does not compile as a valid Rust program, for two reasons:
+/// * `{}` on `Vec<f64>`
+/// * ownership
 #[test]
-fn test081() {
-    test("test081")
+fn fail000() {
+    test("fail000")
 }
