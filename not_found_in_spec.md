@@ -1,11 +1,12 @@
 While the [spec.html](https://wy-lang.org/spec.html) on the official website as of 11:07 July 27, 2020 (UTC) gives you a good enough approximation on how wenyan-lang works, there nevertheless seems to be some discrepancies between the spec.html and the current official implementation. Here I will list what I encountered while writing this transpiler.
 
-## keywords lacking in spec.html
+## tokens lacking in spec.html
 
 * 或若
 * 若其然者
 * 若其不然者
 * 乃止是遍
+* 纖
 
 ## treatment of name_single_statement following statements
 While treated as part of a statement in many syntactic rules, such as
@@ -89,3 +90,12 @@ unary_if_expression         : data|(IDENTIFIER '之'('長'|STRING_LITERAL|IDENTI
 ```
 
 Actual behavior: seems to allow `'長'|STRING_LITERAL|IDENTIFIER|INT_NUM`.
+
+### FLOAT_NUM_KEYWORDS
+
+spec:
+```
+FLOAT_NUM_KEYWORDS          : '分'|'釐'|'毫'|'絲'|'忽'|'微'|'塵'|'埃'|'渺'|'漠' ;
+```
+
+Actual behavior: also has `纖`
