@@ -659,6 +659,10 @@ fn parse_unary_if_expression(mut iter: &mut LexIter<'_>) -> Result<UnaryIfExpr, 
                     Data::Identifier(Identifier(i.to_string())),
                     Identifier(indexer.to_string()),
                 ))),
+                lex::Lex::IntNum(int_num) => Ok(UnaryIfExpr::Complex(Value::Index(
+                    Data::Identifier(Identifier(i.to_string())),
+                    interpret_intnum(int_num),
+                ))), // not found in spec.html but exists
                 _ => Err(Error::SomethingWentWrong(here!())),
             }
         } else {

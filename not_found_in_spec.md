@@ -80,3 +80,12 @@ for_enum_statement          : FOR_START_ENUM  (INT_NUM|IDENTIFIER)  FOR_MID_ENUM
 ```
 
 Actual behavior: seems to allow `INT_NUM|IDENTIFIER|'其'` in the second argument.
+
+### unary_if_expression
+
+spec:
+```
+unary_if_expression         : data|(IDENTIFIER '之'('長'|STRING_LITERAL|IDENTIFIER))|'其' ;
+```
+
+Actual behavior: seems to allow `'長'|STRING_LITERAL|IDENTIFIER|INT_NUM`.
