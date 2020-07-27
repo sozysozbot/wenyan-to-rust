@@ -382,6 +382,10 @@ fn test085() {
 fn test086() {
     test("test086")
 }
+#[test]
+fn test087() {
+    test("test087")
+}
 /// note that fail000.rs currently does not compile as a valid Rust program because of:
 /// * `{}` on `Vec<f64>`
 /// * ownership

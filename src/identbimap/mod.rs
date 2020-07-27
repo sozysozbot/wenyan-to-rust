@@ -141,6 +141,10 @@ impl IdentBiMap {
             parse::Rvalue::Index(data, _)
             | parse::Rvalue::Length(data)
             | parse::Rvalue::Simple(data) => self.insert_data_or_qi2(data, &conversion_table),
+            parse::Rvalue::IndexByIdent(data, ident) => {
+                self.insert_data_or_qi2(data, &conversion_table);
+                self.insert_ident(ident, &conversion_table)
+            }
         }
     }
     fn insert_idents(&mut self, idents: &[parse::Identifier], conversion_table: &Table) {

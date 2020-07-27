@@ -13,6 +13,7 @@ pub enum Lvalue {
 pub enum Rvalue {
     Simple(DataOrQi2),
     Index(DataOrQi2, i64),
+    IndexByIdent(DataOrQi2, Identifier),
     Length(DataOrQi2),
 }
 
@@ -414,7 +415,12 @@ fn parse_assign_after_zhe3(mut iter: &mut LexIter<'_>) -> Result<Rvalue, Error> 
                             unimplemented!("昔之 ... 者今data之STRING_LITERAL是矣")
                         } // not in spec.html but I believe it exists
                         lex::Lex::Identifier(id) => {
-                            unimplemented!("昔之  ... 者今data之IDENTIFIER是矣")
+                            if let lex::Lex::Shi4Yi3 = iter.next().ok_or(Error::UnexpectedEOF)? {
+                                Ok(Rvalue::IndexByIdent(data, Identifier(id.to_string())))
+                            } else {
+                                Err(Error::SomethingWentWrong(here!()))
+                            }
+                            
                         } // not in spec.html but I believe it exists
                         _ => Err(Error::SomethingWentWrong(here!())),
                     }

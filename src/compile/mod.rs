@@ -583,6 +583,11 @@ fn compile_rvalue(mut env: &mut Env, rvalue: &parse::Rvalue) -> String {
         parse::Rvalue::Length(data) => {
             format!("({}.len() as f64)", compile_dataorqi2(&mut env, data))
         }
+        parse::Rvalue::IndexByIdent(data, index) => format!(
+            "{}[({} as usize) - 1]",
+            compile_dataorqi2(&mut env, data),
+            env.ident_map.translate_from_hanzi(&index),
+        )
     }
 }
 
