@@ -645,9 +645,10 @@ fn parse_unary_if_expression(mut iter: &mut LexIter<'_>) -> Result<UnaryIfExpr, 
                 lex::Lex::StringLiteral(strlit) => {
                     unimplemented!("unary_if_expression IF_LOGIC_OP IDENTIFIER 之 STRING_LITERAL")
                 }
-                lex::Lex::Identifier(id) => {
-                    unimplemented!("unary_if_expression IF_LOGIC_OP IDENTIFIER 之 IDENTIFIER")
-                }
+                lex::Lex::Identifier(indexer) => Ok(UnaryIfExpr::Complex(RvalueNoQi2::IndexByIdent(
+                    Data::Identifier(Identifier(i.to_string())),
+                    Identifier(indexer.to_string()),
+                ))),
                 _ => Err(Error::SomethingWentWrong(here!())),
             }
         } else {
