@@ -130,7 +130,7 @@ pub enum Lex {
     /// 乃得矣
     Nai3De2Yi3,
 
-    /// 乃止是遍
+    /// 乃止是遍; not found in spec.html
     Nai3Zhi3Shi4Bian4,
 
     /// 銜
