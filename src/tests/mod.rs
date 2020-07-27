@@ -143,8 +143,8 @@ fn test026() {
     test("test026")
 }
 #[test]
-fn test027() {
-    test("test027")
+fn invalid027() {
+    test("invalid027")
 }
 #[test]
 fn test028() {
@@ -167,24 +167,24 @@ fn test032() {
     test("test032")
 }
 #[test]
-fn test033() {
-    test("test033")
+fn invalid033() {
+    test("invalid033")
 }
 #[test]
-fn test034() {
-    test("test034")
+fn invalid034() {
+    test("invalid034")
 }
 #[test]
 fn test035() {
     test("test035")
 }
 #[test]
-fn test036() {
-    test("test036")
+fn invalid036() {
+    test("invalid036")
 }
 #[test]
-fn test037() {
-    test("test037")
+fn invalid037() {
+    test("invalid037")
 }
 #[test]
 fn test038() {
