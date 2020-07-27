@@ -218,7 +218,6 @@ impl From<&OrQi2<Identifier>> for OrQi2<Data> {
     }
 }
 
-
 fn parse_data_or_qi2(iter: &mut LexIter<'_>) -> Result<OrQi2<Data>, Error> {
     let token = match iter.next() {
         None => return Err(Error::UnexpectedEOF),
@@ -226,11 +225,13 @@ fn parse_data_or_qi2(iter: &mut LexIter<'_>) -> Result<OrQi2<Data>, Error> {
     };
 
     match token {
-        lex::Lex::StringLiteral(strlit) => Ok(OrQi2::NotQi2(Data::StringLiteral(strlit.to_string()))),
-        lex::Lex::BoolValue(bv) => Ok(OrQi2::NotQi2(Data::BoolValue(bv.interpret()))),
-        lex::Lex::Identifier(ident) => {
-            Ok(OrQi2::NotQi2(Data::Identifier(Identifier(ident.to_string()))))
+        lex::Lex::StringLiteral(strlit) => {
+            Ok(OrQi2::NotQi2(Data::StringLiteral(strlit.to_string())))
         }
+        lex::Lex::BoolValue(bv) => Ok(OrQi2::NotQi2(Data::BoolValue(bv.interpret()))),
+        lex::Lex::Identifier(ident) => Ok(OrQi2::NotQi2(Data::Identifier(Identifier(
+            ident.to_string(),
+        )))),
         lex::Lex::IntNum(intnum) => Ok(OrQi2::NotQi2(Data::IntNum(interpret_intnum(intnum)))), /* FIXME: must handle float */
         lex::Lex::Qi2 => Ok(OrQi2::Qi2),
         _ => Err(Error::SomethingWentWrong(here!())),
@@ -386,44 +387,51 @@ fn parse_identifier(iter: &mut LexIter<'_>) -> Result<Identifier, Error> {
     }
 }
 
+fn parse_optional_indexer_and_expect_a_token<T>(
+    iter: &mut LexIter<'_>,
+    data: T,
+    finisher: &lex::Lex,
+) -> Result<Value<T>, Error> {
+    let next_token = iter.next().ok_or(Error::UnexpectedEOF)?;
+    if &lex::Lex::Zhi1 == next_token {
+        match iter.next().ok_or(Error::UnexpectedEOF)? {
+            lex::Lex::IntNum(int_num) => {
+                if finisher == iter.next().ok_or(Error::UnexpectedEOF)? {
+                    Ok(Value::Index(data, interpret_intnum(int_num)))
+                } else {
+                    Err(Error::SomethingWentWrong(here!()))
+                }
+            }
+            lex::Lex::StringLiteral(lit) => unimplemented!("data之STRING_LITERAL"),
+            lex::Lex::Identifier(id) => {
+                if finisher == iter.next().ok_or(Error::UnexpectedEOF)? {
+                    Ok(Value::IndexByIdent(data, Identifier(id.to_string())))
+                } else {
+                    Err(Error::SomethingWentWrong(here!()))
+                }
+            }
+            lex::Lex::Chang2 => {
+                if finisher == iter.next().ok_or(Error::UnexpectedEOF)? {
+                    Ok(Value::Length(data))
+                } else {
+                    Err(Error::SomethingWentWrong(here!()))
+                }
+            }
+            _ => Err(Error::SomethingWentWrong(here!())),
+        }
+    } else if finisher == next_token {
+        Ok(Value::Simple(data))
+    } else {
+        Err(Error::SomethingWentWrong(here!()))
+    }
+}
+
 fn parse_assign_after_zhe3(mut iter: &mut LexIter<'_>) -> Result<Value<OrQi2<Data>>, Error> {
     match iter.next().ok_or(Error::UnexpectedEOF)? {
         lex::Lex::Jin1Bu4Fu4Cun2Yi3 => unimplemented!("昔之 ... 者今不復存矣"),
         lex::Lex::Jin1 => {
             let data = parse_data_or_qi2(&mut iter)?;
-            match iter.next().ok_or(Error::UnexpectedEOF)? {
-                lex::Lex::Zhi1 => {
-                    match iter.next().ok_or(Error::UnexpectedEOF)? {
-                        lex::Lex::IntNum(int_num) => {
-                            if let lex::Lex::Shi4Yi3 = iter.next().ok_or(Error::UnexpectedEOF)? {
-                                Ok(Value::Index(data, interpret_intnum(int_num)))
-                            } else {
-                                Err(Error::SomethingWentWrong(here!()))
-                            }
-                        }
-                        lex::Lex::StringLiteral(lit) => {
-                            unimplemented!("昔之 ... 者今data之STRING_LITERAL是矣")
-                        } // not in spec.html but I believe it exists
-                        lex::Lex::Identifier(id) => {
-                            if let lex::Lex::Shi4Yi3 = iter.next().ok_or(Error::UnexpectedEOF)? {
-                                Ok(Value::IndexByIdent(data, Identifier(id.to_string())))
-                            } else {
-                                Err(Error::SomethingWentWrong(here!()))
-                            }
-                        } // not in spec.html but it exists
-                        lex::Lex::Chang2 => {
-                            if let lex::Lex::Shi4Yi3 = iter.next().ok_or(Error::UnexpectedEOF)? {
-                                Ok(Value::Length(data))
-                            } else {
-                                Err(Error::SomethingWentWrong(here!()))
-                            }
-                        } // not in spec.html but it exists
-                        _ => Err(Error::SomethingWentWrong(here!())),
-                    }
-                }
-                lex::Lex::Shi4Yi3 => Ok(Value::Simple(data)),
-                _ => Err(Error::SomethingWentWrong(here!())),
-            }
+            parse_optional_indexer_and_expect_a_token(&mut iter, data, &lex::Lex::Shi4Yi3)
         }
         _ => Err(Error::SomethingWentWrong(here!())),
     }
@@ -641,18 +649,16 @@ fn parse_unary_if_expression(mut iter: &mut LexIter<'_>) -> Result<UnaryIfExpr, 
             iter.next(); // Identifier(i)
             iter.next(); // Zhi1
             match iter.next().ok_or(Error::UnexpectedEOF)? {
-                lex::Lex::Chang2 => Ok(UnaryIfExpr::Complex(Value::Length(
-                    Data::Identifier(Identifier(i.to_string())),
-                ))),
+                lex::Lex::Chang2 => Ok(UnaryIfExpr::Complex(Value::Length(Data::Identifier(
+                    Identifier(i.to_string()),
+                )))),
                 lex::Lex::StringLiteral(strlit) => {
                     unimplemented!("unary_if_expression IF_LOGIC_OP IDENTIFIER 之 STRING_LITERAL")
                 }
-                lex::Lex::Identifier(indexer) => {
-                    Ok(UnaryIfExpr::Complex(Value::IndexByIdent(
-                        Data::Identifier(Identifier(i.to_string())),
-                        Identifier(indexer.to_string()),
-                    )))
-                }
+                lex::Lex::Identifier(indexer) => Ok(UnaryIfExpr::Complex(Value::IndexByIdent(
+                    Data::Identifier(Identifier(i.to_string())),
+                    Identifier(indexer.to_string()),
+                ))),
                 _ => Err(Error::SomethingWentWrong(here!())),
             }
         } else {

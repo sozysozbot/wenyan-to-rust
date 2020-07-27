@@ -136,7 +136,11 @@ impl IdentBiMap {
             }
         }
     }
-    fn insert_rvalue(&mut self, rv: &parse::Value<parse::OrQi2<parse::Data>>, conversion_table: &Table) {
+    fn insert_rvalue(
+        &mut self,
+        rv: &parse::Value<parse::OrQi2<parse::Data>>,
+        conversion_table: &Table,
+    ) {
         match rv {
             parse::Value::Index(data, _)
             | parse::Value::Length(data)

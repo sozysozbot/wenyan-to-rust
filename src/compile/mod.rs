@@ -309,9 +309,7 @@ fn compile_rvalue_noqi2(
     paren_when_casted: bool,
 ) -> String {
     match rv {
-        parse::Value::Simple(d) => {
-            compile_dataorqi2(&mut env, &parse::OrQi2::NotQi2(d.clone()))
-        }
+        parse::Value::Simple(d) => compile_dataorqi2(&mut env, &parse::OrQi2::NotQi2(d.clone())),
         parse::Value::Length(d) => {
             if paren_when_casted {
                 format!(
