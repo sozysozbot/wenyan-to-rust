@@ -34,7 +34,7 @@ pub enum Statement {
         statements: Vec<Statement>,
     },
     ForEnumIdent {
-        ident: IdentOrQi2,
+        ident: OrQi2<Identifier>,
         statements: Vec<Statement>,
     },
     ForArr {
@@ -77,11 +77,11 @@ pub enum Statement {
         data: Data,
     },
     ArrayFill {
-        what_to_fill: IdentOrQi2,
+        what_to_fill: OrQi2<Identifier>,
         elems: Vec<Data>,
     },
     ArrayCat {
-        append_to: IdentOrQi2,
+        append_to: OrQi2<Identifier>,
         elems: Vec<Identifier>,
     },
     Flush,
@@ -217,20 +217,15 @@ pub enum OrQi2<T> {
     Qi2,
 }
 
-impl From<&IdentOrQi2> for OrQi2<Data> {
-    fn from(identorqi2: &IdentOrQi2) -> Self {
+impl From<&OrQi2<Identifier>> for OrQi2<Data> {
+    fn from(identorqi2: &OrQi2<Identifier>) -> Self {
         match identorqi2 {
-            IdentOrQi2::Ident(ident) => OrQi2::NotQi2(Data::Identifier(ident.clone())),
-            IdentOrQi2::Qi2 => OrQi2::Qi2,
+            OrQi2::NotQi2(ident) => OrQi2::NotQi2(Data::Identifier(ident.clone())),
+            OrQi2::Qi2 => OrQi2::Qi2,
         }
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum IdentOrQi2 {
-    Ident(Identifier),
-    Qi2,
-}
 
 fn parse_data_or_qi2(iter: &mut LexIter<'_>) -> Result<OrQi2<Data>, Error> {
     let token = match iter.next() {
@@ -250,15 +245,15 @@ fn parse_data_or_qi2(iter: &mut LexIter<'_>) -> Result<OrQi2<Data>, Error> {
     }
 }
 
-fn parse_ident_or_qi2(iter: &mut LexIter<'_>) -> Result<IdentOrQi2, Error> {
+fn parse_ident_or_qi2(iter: &mut LexIter<'_>) -> Result<OrQi2<Identifier>, Error> {
     let token = match iter.next() {
         None => return Err(Error::UnexpectedEOF),
         Some(a) => a,
     };
 
     match token {
-        lex::Lex::Identifier(ident) => Ok(IdentOrQi2::Ident(Identifier(ident.to_string()))),
-        lex::Lex::Qi2 => Ok(IdentOrQi2::Qi2),
+        lex::Lex::Identifier(ident) => Ok(OrQi2::NotQi2(Identifier(ident.to_string()))),
+        lex::Lex::Qi2 => Ok(OrQi2::Qi2),
         _ => Err(Error::SomethingWentWrong(here!())),
     }
 }
@@ -361,7 +356,7 @@ fn parse_for_enum_statement_after_wei2shi4(mut iter: &mut LexIter<'_>) -> Result
                     inner.push(parse_statement(&mut iter)?);
                 }
                 Ok(Statement::ForEnumIdent {
-                    ident: IdentOrQi2::Ident(Identifier(ident.to_string())),
+                    ident: OrQi2::NotQi2(Identifier(ident.to_string())),
                     statements: inner,
                 })
             }
@@ -381,7 +376,7 @@ fn parse_for_enum_statement_after_wei2shi4(mut iter: &mut LexIter<'_>) -> Result
                     inner.push(parse_statement(&mut iter)?);
                 }
                 Ok(Statement::ForEnumIdent {
-                    ident: IdentOrQi2::Qi2,
+                    ident: OrQi2::Qi2,
                     statements: inner,
                 })
             }

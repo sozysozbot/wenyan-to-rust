@@ -177,7 +177,7 @@ impl IdentBiMap {
                 elems,
             } => {
                 self.insert_data_or_qi2(&parse::OrQi2::from(what_to_fill), &conversion_table);
-                if let parse::IdentOrQi2::Ident(ident) = what_to_fill {
+                if let parse::OrQi2::NotQi2(ident) = what_to_fill {
                     self.mutable_idents.insert(ident.clone());
                 }
                 self.insert_dats(&elems, &conversion_table);
@@ -237,7 +237,7 @@ impl IdentBiMap {
                 self.insert_ident(&name, &conversion_table)
             }
             ForEnumIdent { ident, statements } => {
-                if let parse::IdentOrQi2::Ident(i) = ident {
+                if let parse::OrQi2::NotQi2(i) = ident {
                     self.insert_ident(&i, &conversion_table);
                 }
                 self.insert_stmts(&statements, &conversion_table)

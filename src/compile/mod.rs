@@ -404,7 +404,7 @@ fn get_new_unnamed_var(mut env: &mut Env) -> usize {
 fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
     match st {
         parse::Statement::ArrayCat {
-            append_to: parse::IdentOrQi2::Ident(ident),
+            append_to: parse::OrQi2::NotQi2(ident),
             elems,
         } => vec![(
             env.indent_level,
@@ -422,7 +422,7 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
         parse::Statement::Continue => vec![(env.indent_level, "continue;".to_string())],
         parse::Statement::Break => vec![(env.indent_level, "break;".to_string())],
         parse::Statement::ArrayFill {
-            what_to_fill: parse::IdentOrQi2::Ident(ident),
+            what_to_fill: parse::OrQi2::NotQi2(ident),
             elems,
         } => vec![(
             env.indent_level,
@@ -445,11 +445,11 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             },
         )],
         parse::Statement::ArrayFill {
-            what_to_fill: parse::IdentOrQi2::Qi2,
+            what_to_fill: parse::OrQi2::Qi2,
             elems: _,
         }
         | parse::Statement::ArrayCat {
-            append_to: parse::IdentOrQi2::Qi2,
+            append_to: parse::OrQi2::Qi2,
             elems: _,
         } => unimplemented!("filling qi2"),
         parse::Statement::If {
@@ -601,7 +601,7 @@ fn ifmutable_thenmut(env: &Env, name: &parse::Identifier) -> &'static str {
 
 fn compile_forenum_ident(
     mut env: &mut Env,
-    ident: &parse::IdentOrQi2,
+    ident: &parse::OrQi2<parse::Identifier>,
     statements: &[parse::Statement],
 ) -> Vec<Line> {
     env.rand_counter += 1;
