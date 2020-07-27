@@ -1,13 +1,14 @@
 # wenyan-to-rust
 
 ## current status
-Can compile all the samples in [明義第一](https://github.com/wenyan-lang/book/blob/master/01%20%E6%98%8E%E7%BE%A9%E7%AC%AC%E4%B8%80.md), [變數第二](https://github.com/wenyan-lang/book/blob/master/02%20%E8%AE%8A%E6%95%B8%E7%AC%AC%E4%BA%8C.md), [算術第三](https://github.com/wenyan-lang/book/blob/master/03%20%E7%AE%97%E8%A1%93%E7%AC%AC%E4%B8%89.md), [決策第四](https://github.com/wenyan-lang/book/blob/master/04%20%E6%B1%BA%E7%AD%96%E7%AC%AC%E5%9B%9B.md) and [循環第五](https://github.com/wenyan-lang/book/blob/master/05%20%E5%BE%AA%E7%92%B0%E7%AC%AC%E4%BA%94.md).
+Can compile all the samples in [明義第一](https://github.com/wenyan-lang/book/blob/master/01%20%E6%98%8E%E7%BE%A9%E7%AC%AC%E4%B8%80.md), [變數第二](https://github.com/wenyan-lang/book/blob/master/02%20%E8%AE%8A%E6%95%B8%E7%AC%AC%E4%BA%8C.md), [算術第三](https://github.com/wenyan-lang/book/blob/master/03%20%E7%AE%97%E8%A1%93%E7%AC%AC%E4%B8%89.md), [決策第四](https://github.com/wenyan-lang/book/blob/master/04%20%E6%B1%BA%E7%AD%96%E7%AC%AC%E5%9B%9B.md) and [循環第五](https://github.com/wenyan-lang/book/blob/master/05%20%E5%BE%AA%E7%92%B0%E7%AC%AC%E4%BA%94.md) correctly. Samples in [行列第六](https://github.com/wenyan-lang/book/blob/master/06%20%E8%A1%8C%E5%88%97%E7%AC%AC%E5%85%AD.md) compiles but currently does not necessarily compile to a valid Rust program, becase in Rust `{}` cannot be used to `println!` a `Vec<_>` and we also have an ownership issue.
 
 ## known problems
 * must change the `println!` into a custom function, in order to:
     * print the numbers in Hanzi
     * print the array (note that test081.rs currently does not compile as a valid Rust program)
 
+* must handle `Vec<_>` ownership correctly
 
 ## samples
 
