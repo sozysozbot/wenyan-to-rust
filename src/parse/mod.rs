@@ -11,10 +11,10 @@ pub enum Lvalue {
 
 #[derive(Debug)]
 pub enum Rvalue {
-    Simple(DataOrQi2),
-    Index(DataOrQi2, i64),
-    IndexByIdent(DataOrQi2, Identifier),
-    Length(DataOrQi2),
+    Simple(OrQi2<Data>),
+    Index(OrQi2<Data>, i64),
+    IndexByIdent(OrQi2<Data>, Identifier),
+    Length(OrQi2<Data>),
 }
 
 #[derive(Debug, Clone)]
@@ -106,7 +106,7 @@ pub enum IfCond {
 
 #[derive(Debug, Clone)]
 pub enum UnaryIfExpr {
-    Simple(DataOrQi2),
+    Simple(OrQi2<Data>),
     Complex(RvalueNoQi2),
 }
 
@@ -131,10 +131,15 @@ impl DivBinaryOp {
 
 #[derive(Debug)]
 pub enum MathKind {
-    ArithBinaryMath(lex::ArithBinaryOp, DataOrQi2, lex::Preposition, DataOrQi2),
-    ArithUnaryMath(DataOrQi2),
+    ArithBinaryMath(
+        lex::ArithBinaryOp,
+        OrQi2<Data>,
+        lex::Preposition,
+        OrQi2<Data>,
+    ),
+    ArithUnaryMath(OrQi2<Data>),
     BooleanAlgebra(Identifier, Identifier, lex::LogicBinaryOp),
-    ModMath(DivBinaryOp, DataOrQi2, lex::Preposition, DataOrQi2),
+    ModMath(DivBinaryOp, OrQi2<Data>, lex::Preposition, OrQi2<Data>),
 }
 
 #[derive(Debug)]
@@ -207,16 +212,16 @@ fn interpret_intnum(num: &lex::IntNum) -> i64 {
 }
 
 #[derive(Debug, Clone)]
-pub enum DataOrQi2 {
-    Data(Data),
+pub enum OrQi2<T> {
+    NotQi2(T),
     Qi2,
 }
 
-impl From<&IdentOrQi2> for DataOrQi2 {
+impl From<&IdentOrQi2> for OrQi2<Data> {
     fn from(identorqi2: &IdentOrQi2) -> Self {
         match identorqi2 {
-            IdentOrQi2::Ident(ident) => DataOrQi2::Data(Data::Identifier(ident.clone())),
-            IdentOrQi2::Qi2 => DataOrQi2::Qi2,
+            IdentOrQi2::Ident(ident) => OrQi2::NotQi2(Data::Identifier(ident.clone())),
+            IdentOrQi2::Qi2 => OrQi2::Qi2,
         }
     }
 }
@@ -227,22 +232,20 @@ pub enum IdentOrQi2 {
     Qi2,
 }
 
-fn parse_data_or_qi2(iter: &mut LexIter<'_>) -> Result<DataOrQi2, Error> {
+fn parse_data_or_qi2(iter: &mut LexIter<'_>) -> Result<OrQi2<Data>, Error> {
     let token = match iter.next() {
         None => return Err(Error::UnexpectedEOF),
         Some(a) => a,
     };
 
     match token {
-        lex::Lex::StringLiteral(strlit) => {
-            Ok(DataOrQi2::Data(Data::StringLiteral(strlit.to_string())))
+        lex::Lex::StringLiteral(strlit) => Ok(OrQi2::NotQi2(Data::StringLiteral(strlit.to_string()))),
+        lex::Lex::BoolValue(bv) => Ok(OrQi2::NotQi2(Data::BoolValue(bv.interpret()))),
+        lex::Lex::Identifier(ident) => {
+            Ok(OrQi2::NotQi2(Data::Identifier(Identifier(ident.to_string()))))
         }
-        lex::Lex::BoolValue(bv) => Ok(DataOrQi2::Data(Data::BoolValue(bv.interpret()))),
-        lex::Lex::Identifier(ident) => Ok(DataOrQi2::Data(Data::Identifier(Identifier(
-            ident.to_string(),
-        )))),
-        lex::Lex::IntNum(intnum) => Ok(DataOrQi2::Data(Data::IntNum(interpret_intnum(intnum)))), /* FIXME: must handle float */
-        lex::Lex::Qi2 => Ok(DataOrQi2::Qi2),
+        lex::Lex::IntNum(intnum) => Ok(OrQi2::NotQi2(Data::IntNum(interpret_intnum(intnum)))), /* FIXME: must handle float */
+        lex::Lex::Qi2 => Ok(OrQi2::Qi2),
         _ => Err(Error::SomethingWentWrong(here!())),
     }
 }
@@ -420,7 +423,6 @@ fn parse_assign_after_zhe3(mut iter: &mut LexIter<'_>) -> Result<Rvalue, Error> 
                             } else {
                                 Err(Error::SomethingWentWrong(here!()))
                             }
-                            
                         } // not in spec.html but it exists
                         lex::Lex::Chang2 => {
                             if let lex::Lex::Shi4Yi3 = iter.next().ok_or(Error::UnexpectedEOF)? {
@@ -428,7 +430,6 @@ fn parse_assign_after_zhe3(mut iter: &mut LexIter<'_>) -> Result<Rvalue, Error> 
                             } else {
                                 Err(Error::SomethingWentWrong(here!()))
                             }
-                            
                         } // not in spec.html but it exists
                         _ => Err(Error::SomethingWentWrong(here!())),
                     }
@@ -659,10 +660,12 @@ fn parse_unary_if_expression(mut iter: &mut LexIter<'_>) -> Result<UnaryIfExpr, 
                 lex::Lex::StringLiteral(strlit) => {
                     unimplemented!("unary_if_expression IF_LOGIC_OP IDENTIFIER 之 STRING_LITERAL")
                 }
-                lex::Lex::Identifier(indexer) => Ok(UnaryIfExpr::Complex(RvalueNoQi2::IndexByIdent(
-                    Data::Identifier(Identifier(i.to_string())),
-                    Identifier(indexer.to_string()),
-                ))),
+                lex::Lex::Identifier(indexer) => {
+                    Ok(UnaryIfExpr::Complex(RvalueNoQi2::IndexByIdent(
+                        Data::Identifier(Identifier(i.to_string())),
+                        Identifier(indexer.to_string()),
+                    )))
+                }
                 _ => Err(Error::SomethingWentWrong(here!())),
             }
         } else {
@@ -772,7 +775,7 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
             Ok(parse_if_statement_after_zhe3(&mut iter)?.to_stmt_with_cond(IfCond::NotQi2))
         }
         lex::Lex::Ruo4Qi2Ran2Zhe3 => Ok(parse_if_statement_after_zhe3(&mut iter)?
-            .to_stmt_with_cond(IfCond::Unary(UnaryIfExpr::Simple(DataOrQi2::Qi2)))),
+            .to_stmt_with_cond(IfCond::Unary(UnaryIfExpr::Simple(OrQi2::Qi2)))),
         lex::Lex::Ruo4 => {
             // if_statement                : '若' if_expression '者' statement+ ('或若' if_expression '者' statement+)* ('若非' statement+)? FOR_IF_END ;
             let ifexpr = parse_ifexpression_plus_zhe3(&mut iter)?;
@@ -818,7 +821,7 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
             })
         }
         lex::Lex::Bian4Change => Ok(Statement::Math {
-            math: MathKind::ArithUnaryMath(DataOrQi2::from(&parse_ident_or_qi2(&mut iter)?)),
+            math: MathKind::ArithUnaryMath(OrQi2::from(&parse_ident_or_qi2(&mut iter)?)),
         }),
         lex::Lex::You3 => parse_init_define_statement_after_you3(&mut iter),
         lex::Lex::Heng2Wei2Shi4 => {

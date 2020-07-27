@@ -81,8 +81,8 @@ impl IdentBiMap {
         }
     }
 
-    fn insert_data_or_qi2(&mut self, dat: &parse::DataOrQi2, conversion_table: &Table) {
-        if let parse::DataOrQi2::Data(d1) = dat {
+    fn insert_data_or_qi2(&mut self, dat: &parse::OrQi2<parse::Data>, conversion_table: &Table) {
+        if let parse::OrQi2::NotQi2(d1) = dat {
             self.insert_dat(d1, &conversion_table);
         }
     }
@@ -169,14 +169,14 @@ impl IdentBiMap {
                 self.insert_stmts(&stmts, &conversion_table)
             }
             ArrayCat { append_to, elems } => {
-                self.insert_data_or_qi2(&parse::DataOrQi2::from(append_to), &conversion_table);
+                self.insert_data_or_qi2(&parse::OrQi2::from(append_to), &conversion_table);
                 self.insert_idents(&elems, &conversion_table)
             }
             ArrayFill {
                 what_to_fill,
                 elems,
             } => {
-                self.insert_data_or_qi2(&parse::DataOrQi2::from(what_to_fill), &conversion_table);
+                self.insert_data_or_qi2(&parse::OrQi2::from(what_to_fill), &conversion_table);
                 if let parse::IdentOrQi2::Ident(ident) = what_to_fill {
                     self.mutable_idents.insert(ident.clone());
                 }

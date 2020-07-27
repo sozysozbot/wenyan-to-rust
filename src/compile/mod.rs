@@ -131,9 +131,9 @@ fn compile_forenum(mut env: &mut Env, num: i64, statements: &[parse::Statement])
     r
 }
 
-fn compile_dataorqi2(env: &mut Env, a: &parse::DataOrQi2) -> String {
+fn compile_dataorqi2(env: &mut Env, a: &parse::OrQi2<parse::Data>) -> String {
     match a {
-        parse::DataOrQi2::Qi2 => {
+        parse::OrQi2::Qi2 => {
             let qi = env
                 .variables_not_yet_named
                 .last()
@@ -144,7 +144,7 @@ fn compile_dataorqi2(env: &mut Env, a: &parse::DataOrQi2) -> String {
             env.variables_not_yet_named = vec![];
             qi
         }
-        parse::DataOrQi2::Data(data) => compile_literal(&env, &data),
+        parse::OrQi2::NotQi2(data) => compile_literal(&env, &data),
     }
 }
 
@@ -179,8 +179,8 @@ fn compile_dataorqi2(env: &mut Env, a: &parse::DataOrQi2) -> String {
 fn compile_math(mut env: &mut Env, math: &parse::MathKind) -> Vec<Line> {
     match math {
         parse::MathKind::BooleanAlgebra(ident1, ident2, op) => {
-            let data1 = parse::DataOrQi2::Data(parse::Data::Identifier(ident1.clone()));
-            let data2 = parse::DataOrQi2::Data(parse::Data::Identifier(ident2.clone()));
+            let data1 = parse::OrQi2::NotQi2(parse::Data::Identifier(ident1.clone()));
+            let data2 = parse::OrQi2::NotQi2(parse::Data::Identifier(ident2.clone()));
             compile_math_binary(
                 &mut env,
                 op.to_str(),
@@ -210,9 +210,9 @@ fn compile_math(mut env: &mut Env, math: &parse::MathKind) -> Vec<Line> {
 fn compile_math_binary(
     mut env: &mut Env,
     opstr: &str,
-    data1: &parse::DataOrQi2,
+    data1: &parse::OrQi2<parse::Data>,
     prep: lex::Preposition,
-    data2: &parse::DataOrQi2,
+    data2: &parse::OrQi2<parse::Data>,
 ) -> Vec<Line> {
     let left = compile_dataorqi2(
         &mut env,
@@ -310,29 +310,29 @@ fn compile_rvalue_noqi2(
 ) -> String {
     match rv {
         parse::RvalueNoQi2::Simple(d) => {
-            compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(d.clone()))
+            compile_dataorqi2(&mut env, &parse::OrQi2::NotQi2(d.clone()))
         }
         parse::RvalueNoQi2::Length(d) => {
             if paren_when_casted {
                 format!(
                     "({}.len() as f64)",
-                    compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(d.clone()))
+                    compile_dataorqi2(&mut env, &parse::OrQi2::NotQi2(d.clone()))
                 )
             } else {
                 format!(
                     "{}.len() as f64",
-                    compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(d.clone()))
+                    compile_dataorqi2(&mut env, &parse::OrQi2::NotQi2(d.clone()))
                 )
             }
         }
         parse::RvalueNoQi2::Index(d, ind) => format!(
             "{}[{} - 1]",
-            compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(d.clone())),
+            compile_dataorqi2(&mut env, &parse::OrQi2::NotQi2(d.clone())),
             ind
         ),
         parse::RvalueNoQi2::IndexByIdent(d, ident) => format!(
             "{}[({} as usize) - 1]",
-            compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(d.clone())),
+            compile_dataorqi2(&mut env, &parse::OrQi2::NotQi2(d.clone())),
             env.ident_map.translate_from_hanzi(&ident)
         ),
     }
@@ -366,7 +366,7 @@ fn compile_ifcond(mut env: &mut Env, ifcond: &parse::IfCond, keyword: &str) -> L
             format!(
                 "{} !{} {{",
                 keyword,
-                compile_dataorqi2(&mut env, &parse::DataOrQi2::Qi2),
+                compile_dataorqi2(&mut env, &parse::OrQi2::Qi2),
             ),
         ),
     }
@@ -477,7 +477,7 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
             format!(
                 "let  _ans{} = &{}[1..].to_vec();",
                 get_new_unnamed_var(&mut env),
-                compile_dataorqi2(&mut env, &parse::DataOrQi2::Data(data.clone()))
+                compile_dataorqi2(&mut env, &parse::OrQi2::NotQi2(data.clone()))
             ),
         )],
         parse::Statement::Declare(parse::DeclareStatement {
@@ -587,7 +587,7 @@ fn compile_rvalue(mut env: &mut Env, rvalue: &parse::Rvalue) -> String {
             "{}[({} as usize) - 1]",
             compile_dataorqi2(&mut env, data),
             env.ident_map.translate_from_hanzi(&index),
-        )
+        ),
     }
 }
 
@@ -613,7 +613,7 @@ fn compile_forenum_ident(
             format!(
                 "while _rand{} < {} {{",
                 rand_n,
-                compile_dataorqi2(&mut env, &parse::DataOrQi2::from(ident)),
+                compile_dataorqi2(&mut env, &parse::OrQi2::from(ident)),
             ),
         ),
     ];
