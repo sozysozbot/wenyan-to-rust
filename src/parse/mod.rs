@@ -421,7 +421,15 @@ fn parse_assign_after_zhe3(mut iter: &mut LexIter<'_>) -> Result<Rvalue, Error> 
                                 Err(Error::SomethingWentWrong(here!()))
                             }
                             
-                        } // not in spec.html but I believe it exists
+                        } // not in spec.html but it exists
+                        lex::Lex::Chang2 => {
+                            if let lex::Lex::Shi4Yi3 = iter.next().ok_or(Error::UnexpectedEOF)? {
+                                Ok(Rvalue::Length(data))
+                            } else {
+                                Err(Error::SomethingWentWrong(here!()))
+                            }
+                            
+                        } // not in spec.html but it exists
                         _ => Err(Error::SomethingWentWrong(here!())),
                     }
                 }
