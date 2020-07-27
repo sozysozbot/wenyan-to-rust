@@ -87,12 +87,12 @@ impl IdentBiMap {
         }
     }
 
-    fn insert_rvaluenoqi2(&mut self, val: &parse::RvalueNoQi2, conversion_table: &Table) {
+    fn insert_rvaluenoqi2(&mut self, val: &parse::Value<parse::Data>, conversion_table: &Table) {
         match val {
-            parse::RvalueNoQi2::Index(data, _)
-            | parse::RvalueNoQi2::Simple(data)
-            | parse::RvalueNoQi2::Length(data) => self.insert_dat(data, &conversion_table),
-            parse::RvalueNoQi2::IndexByIdent(data, ident) => {
+            parse::Value::Index(data, _)
+            | parse::Value::Simple(data)
+            | parse::Value::Length(data) => self.insert_dat(data, &conversion_table),
+            parse::Value::IndexByIdent(data, ident) => {
                 self.insert_dat(data, &conversion_table);
                 self.insert_ident(ident, &conversion_table)
             }
@@ -136,12 +136,12 @@ impl IdentBiMap {
             }
         }
     }
-    fn insert_rvalue(&mut self, rv: &parse::Rvalue, conversion_table: &Table) {
+    fn insert_rvalue(&mut self, rv: &parse::Value<parse::OrQi2<parse::Data>>, conversion_table: &Table) {
         match rv {
-            parse::Rvalue::Index(data, _)
-            | parse::Rvalue::Length(data)
-            | parse::Rvalue::Simple(data) => self.insert_data_or_qi2(data, &conversion_table),
-            parse::Rvalue::IndexByIdent(data, ident) => {
+            parse::Value::Index(data, _)
+            | parse::Value::Length(data)
+            | parse::Value::Simple(data) => self.insert_data_or_qi2(data, &conversion_table),
+            parse::Value::IndexByIdent(data, ident) => {
                 self.insert_data_or_qi2(data, &conversion_table);
                 self.insert_ident(ident, &conversion_table)
             }

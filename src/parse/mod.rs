@@ -9,20 +9,12 @@ pub enum Lvalue {
     IndexByIdent(Identifier, Identifier),
 }
 
-#[derive(Debug)]
-pub enum Rvalue {
-    Simple(OrQi2<Data>),
-    Index(OrQi2<Data>, i64),
-    IndexByIdent(OrQi2<Data>, Identifier),
-    Length(OrQi2<Data>),
-}
-
 #[derive(Debug, Clone)]
-pub enum RvalueNoQi2 {
-    Simple(Data),
-    Index(Data, i64),
-    IndexByIdent(Data, Identifier),
-    Length(Data),
+pub enum Value<T> {
+    Simple(T),
+    Index(T, i64),
+    IndexByIdent(T, Identifier),
+    Length(T),
 }
 
 #[derive(Debug)]
@@ -66,12 +58,12 @@ pub enum Statement {
     },
     Assignment {
         lvalue: Lvalue,
-        rvalue: Rvalue,
+        rvalue: Value<OrQi2<Data>>,
     },
     // Import,
     // Object,
     Reference {
-        rvalue: RvalueNoQi2,
+        rvalue: Value<Data>,
     },
     ReferenceWhatIsLeft {
         data: Data,
@@ -107,7 +99,7 @@ pub enum IfCond {
 #[derive(Debug, Clone)]
 pub enum UnaryIfExpr {
     Simple(OrQi2<Data>),
-    Complex(RvalueNoQi2),
+    Complex(Value<Data>),
 }
 
 //#[derive(Debug)]
@@ -394,7 +386,7 @@ fn parse_identifier(iter: &mut LexIter<'_>) -> Result<Identifier, Error> {
     }
 }
 
-fn parse_assign_after_zhe3(mut iter: &mut LexIter<'_>) -> Result<Rvalue, Error> {
+fn parse_assign_after_zhe3(mut iter: &mut LexIter<'_>) -> Result<Value<OrQi2<Data>>, Error> {
     match iter.next().ok_or(Error::UnexpectedEOF)? {
         lex::Lex::Jin1Bu4Fu4Cun2Yi3 => unimplemented!("昔之 ... 者今不復存矣"),
         lex::Lex::Jin1 => {
@@ -404,7 +396,7 @@ fn parse_assign_after_zhe3(mut iter: &mut LexIter<'_>) -> Result<Rvalue, Error> 
                     match iter.next().ok_or(Error::UnexpectedEOF)? {
                         lex::Lex::IntNum(int_num) => {
                             if let lex::Lex::Shi4Yi3 = iter.next().ok_or(Error::UnexpectedEOF)? {
-                                Ok(Rvalue::Index(data, interpret_intnum(int_num)))
+                                Ok(Value::Index(data, interpret_intnum(int_num)))
                             } else {
                                 Err(Error::SomethingWentWrong(here!()))
                             }
@@ -414,14 +406,14 @@ fn parse_assign_after_zhe3(mut iter: &mut LexIter<'_>) -> Result<Rvalue, Error> 
                         } // not in spec.html but I believe it exists
                         lex::Lex::Identifier(id) => {
                             if let lex::Lex::Shi4Yi3 = iter.next().ok_or(Error::UnexpectedEOF)? {
-                                Ok(Rvalue::IndexByIdent(data, Identifier(id.to_string())))
+                                Ok(Value::IndexByIdent(data, Identifier(id.to_string())))
                             } else {
                                 Err(Error::SomethingWentWrong(here!()))
                             }
                         } // not in spec.html but it exists
                         lex::Lex::Chang2 => {
                             if let lex::Lex::Shi4Yi3 = iter.next().ok_or(Error::UnexpectedEOF)? {
-                                Ok(Rvalue::Length(data))
+                                Ok(Value::Length(data))
                             } else {
                                 Err(Error::SomethingWentWrong(here!()))
                             }
@@ -429,7 +421,7 @@ fn parse_assign_after_zhe3(mut iter: &mut LexIter<'_>) -> Result<Rvalue, Error> 
                         _ => Err(Error::SomethingWentWrong(here!())),
                     }
                 }
-                lex::Lex::Shi4Yi3 => Ok(Rvalue::Simple(data)),
+                lex::Lex::Shi4Yi3 => Ok(Value::Simple(data)),
                 _ => Err(Error::SomethingWentWrong(here!())),
             }
         }
@@ -509,20 +501,20 @@ fn parse_reference_statement_after_fu2(mut iter: &mut LexIter<'_>) -> Result<Sta
             {
                 lex::Lex::StringLiteral(lit) => unimplemented!("夫 data 之 STRING_LITERAL"),
                 lex::Lex::IntNum(index) => Ok(Statement::Reference {
-                    rvalue: RvalueNoQi2::Index(data, interpret_intnum(&index)),
+                    rvalue: Value::Index(data, interpret_intnum(&index)),
                 }),
                 lex::Lex::Qi2Yu2 => Ok(Statement::ReferenceWhatIsLeft { data }),
                 lex::Lex::Identifier(ident) => Ok(Statement::Reference {
-                    rvalue: RvalueNoQi2::IndexByIdent(data, Identifier(ident.clone())),
+                    rvalue: Value::IndexByIdent(data, Identifier(ident.clone())),
                 }),
                 lex::Lex::Chang2 => Ok(Statement::Reference {
-                    rvalue: RvalueNoQi2::Length(data),
+                    rvalue: Value::Length(data),
                 }),
                 _ => Err(Error::SomethingWentWrong(here!())),
             }
         }
         _ => Ok(Statement::Reference {
-            rvalue: RvalueNoQi2::Simple(data),
+            rvalue: Value::Simple(data),
         }),
     }
 }
@@ -649,14 +641,14 @@ fn parse_unary_if_expression(mut iter: &mut LexIter<'_>) -> Result<UnaryIfExpr, 
             iter.next(); // Identifier(i)
             iter.next(); // Zhi1
             match iter.next().ok_or(Error::UnexpectedEOF)? {
-                lex::Lex::Chang2 => Ok(UnaryIfExpr::Complex(RvalueNoQi2::Length(
+                lex::Lex::Chang2 => Ok(UnaryIfExpr::Complex(Value::Length(
                     Data::Identifier(Identifier(i.to_string())),
                 ))),
                 lex::Lex::StringLiteral(strlit) => {
                     unimplemented!("unary_if_expression IF_LOGIC_OP IDENTIFIER 之 STRING_LITERAL")
                 }
                 lex::Lex::Identifier(indexer) => {
-                    Ok(UnaryIfExpr::Complex(RvalueNoQi2::IndexByIdent(
+                    Ok(UnaryIfExpr::Complex(Value::IndexByIdent(
                         Data::Identifier(Identifier(i.to_string())),
                         Identifier(indexer.to_string()),
                     )))

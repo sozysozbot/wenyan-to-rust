@@ -305,14 +305,14 @@ fn compile_name_multi_statement(mut env: &mut Env, idents: &[parse::Identifier])
 
 fn compile_rvalue_noqi2(
     mut env: &mut Env,
-    rv: &parse::RvalueNoQi2,
+    rv: &parse::Value<parse::Data>,
     paren_when_casted: bool,
 ) -> String {
     match rv {
-        parse::RvalueNoQi2::Simple(d) => {
+        parse::Value::Simple(d) => {
             compile_dataorqi2(&mut env, &parse::OrQi2::NotQi2(d.clone()))
         }
-        parse::RvalueNoQi2::Length(d) => {
+        parse::Value::Length(d) => {
             if paren_when_casted {
                 format!(
                     "({}.len() as f64)",
@@ -325,12 +325,12 @@ fn compile_rvalue_noqi2(
                 )
             }
         }
-        parse::RvalueNoQi2::Index(d, ind) => format!(
+        parse::Value::Index(d, ind) => format!(
             "{}[{} - 1]",
             compile_dataorqi2(&mut env, &parse::OrQi2::NotQi2(d.clone())),
             ind
         ),
-        parse::RvalueNoQi2::IndexByIdent(d, ident) => format!(
+        parse::Value::IndexByIdent(d, ident) => format!(
             "{}[({} as usize) - 1]",
             compile_dataorqi2(&mut env, &parse::OrQi2::NotQi2(d.clone())),
             env.ident_map.translate_from_hanzi(&ident)
@@ -574,16 +574,16 @@ fn compile_lvalue(env: &Env, lvalue: &parse::Lvalue) -> String {
     }
 }
 
-fn compile_rvalue(mut env: &mut Env, rvalue: &parse::Rvalue) -> String {
+fn compile_rvalue(mut env: &mut Env, rvalue: &parse::Value<parse::OrQi2<parse::Data>>) -> String {
     match rvalue {
-        parse::Rvalue::Index(data, index) => {
+        parse::Value::Index(data, index) => {
             format!("{}[{} - 1]", compile_dataorqi2(&mut env, data), index)
         }
-        parse::Rvalue::Simple(data) => compile_dataorqi2(&mut env, data),
-        parse::Rvalue::Length(data) => {
+        parse::Value::Simple(data) => compile_dataorqi2(&mut env, data),
+        parse::Value::Length(data) => {
             format!("({}.len() as f64)", compile_dataorqi2(&mut env, data))
         }
-        parse::Rvalue::IndexByIdent(data, index) => format!(
+        parse::Value::IndexByIdent(data, index) => format!(
             "{}[({} as usize) - 1]",
             compile_dataorqi2(&mut env, data),
             env.ident_map.translate_from_hanzi(&index),
