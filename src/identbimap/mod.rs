@@ -1,7 +1,6 @@
 use crate::parse;
-use bimap::BiMap;
 use std::collections::HashMap;
-use std::collections::HashSet;
+use bimap_plus_map::BiMapPlusMap;
 
 type Table = HashMap<String, String>;
 
@@ -20,38 +19,36 @@ fn to_pinyin(ident: parse::Identifier, conversion_table: &Table) -> String {
 type Hanzi = parse::Identifier;
 type Ascii = String;
 
-#[derive(Clone)]
-pub struct IdentBiMap {
-    bimap: BiMap<Hanzi, Ascii>,
-    mutable_idents: HashSet<Hanzi>,
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Type {
+    Mutable
 }
+
+pub struct IdentBiMap(BiMapPlusMap<Hanzi, Ascii, Option<Type>>);
 
 impl IdentBiMap {
     pub fn translate_from_hanzi(&self, id: &parse::Identifier) -> Ascii {
-        self.bimap.get_by_left(id).unwrap().to_string()
+        self.0.bimap_get_by_left(id).unwrap().to_string()
     }
 
     pub fn is_mutable(&self, id: &parse::Identifier) -> bool {
-        self.mutable_idents.contains(id)
+        let typ = self.0.hashmap_get_by_left(id).unwrap();
+        *typ == Some(Type::Mutable)
     }
 
     pub fn new(parsed: &[parse::Statement], conversion_table: &Table) -> Self {
-        let mut ans = IdentBiMap {
-            bimap: BiMap::new(),
-            mutable_idents: HashSet::new(),
-        };
+        let mut ans = IdentBiMap(BiMapPlusMap::new());
         for st in parsed {
             ans.insert_stmt(&st, &conversion_table);
         }
 
-        eprintln!("bimap: {:?}", ans.bimap);
-        eprintln!("mutable_idents: {:?}", ans.mutable_idents);
+        eprintln!("{:?}", ans.0);
         ans
     }
 
     fn insert_ident(&mut self, ident: &parse::Identifier, conversion_table: &Table) {
         // if already known, no need to do anything
-        if self.bimap.get_by_left(&ident).is_some() {
+        if self.0.bimap_get_by_left(&ident).is_some() {
             return;
         }
 
@@ -60,10 +57,10 @@ impl IdentBiMap {
         let mut candidate: Ascii = to_pinyin(ident.clone(), &conversion_table);
 
         loop {
-            if self.bimap.get_by_right(&candidate).is_some() {
+            if self.0.bimap_get_by_right(&candidate).is_some() {
                 candidate.push('_');
             } else {
-                self.bimap.insert(ident.clone(), candidate);
+                self.0.insert(ident.clone(), candidate, None);
                 break;
             }
         }
@@ -182,7 +179,8 @@ impl IdentBiMap {
             } => {
                 self.insert_data_or_qi2(&parse::OrQi2::from(what_to_fill), &conversion_table);
                 if let parse::OrQi2::NotQi2(ident) = what_to_fill {
-                    self.mutable_idents.insert(ident.clone());
+                    let ascii = self.0.bimap_get_by_left(&ident).unwrap().clone();
+                    self.0.insert(ident.clone(), ascii.clone(), Some(Type::Mutable));
                 }
                 self.insert_dats(&elems, &conversion_table);
             }
@@ -211,7 +209,8 @@ impl IdentBiMap {
                 rvalue,
             } => {
                 self.insert_ident(&ident, &conversion_table);
-                self.mutable_idents.insert(ident.clone());
+                let ascii = self.0.bimap_get_by_left(&ident).unwrap().clone();
+                self.0.insert(ident.clone(), ascii.clone(), Some(Type::Mutable));
                 self.insert_rvalue(rvalue, &conversion_table)
             }
             Assignment {
@@ -219,7 +218,8 @@ impl IdentBiMap {
                 rvalue,
             } => {
                 self.insert_ident(&ident, &conversion_table);
-                self.mutable_idents.insert(ident.clone());
+                let ascii = self.0.bimap_get_by_left(&ident).unwrap().clone();
+                self.0.insert(ident.clone(), ascii.clone(), Some(Type::Mutable));
                 self.insert_ident(&index, &conversion_table);
                 self.insert_rvalue(rvalue, &conversion_table)
             }

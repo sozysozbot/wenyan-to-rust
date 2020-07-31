@@ -51,11 +51,17 @@ dependencies = [
 
 [[package]]
 name = "bimap"
-version = "0.4.0"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "783204f24fd7724ea274d327619cfa6a6018047bb0561a68aadff6f56787591b"
+checksum = "43806ad6cd3dec8ef84ac19f35a7b0075aee8c8a913ffc3a09191e6d7131e781"
+
+[[package]]
+name = "bimap_plus_map"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d6fb8c85d78ca08fe8f7ede911ad8567dcba1f61789bb45c99087212a51e3800"
 dependencies = [
- "cfg-if",
+ "bimap",
 ]
 
 [[package]]
@@ -221,9 +227,9 @@ checksum = "5317f7588f0a5078ee60ef675ef96735a1442132dc645eb1d12c018620ed8cd3"
 
 [[package]]
 name = "serde_json"
-version = "1.0.56"
+version = "1.0.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3433e879a558dde8b5e8feb2a04899cf34fdde1fafb894687e52105fc1162ac3"
+checksum = "164eacbdb13512ec2745fb09d51fd5b22b0d65ed294a1dcf7285a360c80a675c"
 dependencies = [
  "itoa",
  "ryu",
@@ -300,6 +306,7 @@ name = "wenyan-to-rust"
 version = "0.1.0"
 dependencies = [
  "bimap",
+ "bimap_plus_map",
  "clap",
  "peek-nth",
  "position",

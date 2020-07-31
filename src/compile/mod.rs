@@ -4,7 +4,6 @@ use crate::parse;
 
 type Line = (usize, String);
 
-#[derive(Clone)]
 struct Env {
     ans_counter: usize,
     rand_counter: usize,
