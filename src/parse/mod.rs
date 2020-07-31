@@ -550,7 +550,7 @@ struct IfStmtAfterZhe3 {
 }
 
 impl IfStmtAfterZhe3 {
-    pub fn to_stmt_with_cond(self, cond: IfCond) -> Statement {
+    pub fn into_stmt_with_cond(self, cond: IfCond) -> Statement {
         let IfStmtAfterZhe3 {
             ifstmts,
             elseifcases,
@@ -629,7 +629,8 @@ fn parse_unary_if_expression(mut iter: &mut LexIter<'_>) -> Result<UnaryIfExpr, 
         // either `data` or `(IDENTIFIER '之'('長'|STRING_LITERAL|IDENTIFIER))`
         if let Some(lex::Lex::Zhi1) = iter.peek_nth(1) {
             iter.next(); // Identifier(i)
-            let res = parse_optional_indexer(&mut iter, Data::Identifier(Identifier(i.to_string())))?;
+            let res =
+                parse_optional_indexer(&mut iter, Data::Identifier(Identifier(i.to_string())))?;
             Ok(UnaryIfExpr::Complex(res))
         } else {
             let data2 = parse_data_or_qi2(&mut iter)?;
@@ -735,10 +736,10 @@ fn parse_statement(mut iter: &mut LexIter<'_>) -> Result<Statement, Error> {
         lex::Lex::Xian2 => parse_arraycat_after_xian2(&mut iter),
         lex::Lex::Chong1 => parse_arraypush_after_chong1(&mut iter),
         lex::Lex::Ruo4Qi2Bu4Ran2Zhe3 => {
-            Ok(parse_if_statement_after_zhe3(&mut iter)?.to_stmt_with_cond(IfCond::NotQi2))
+            Ok(parse_if_statement_after_zhe3(&mut iter)?.into_stmt_with_cond(IfCond::NotQi2))
         }
         lex::Lex::Ruo4Qi2Ran2Zhe3 => Ok(parse_if_statement_after_zhe3(&mut iter)?
-            .to_stmt_with_cond(IfCond::Unary(UnaryIfExpr::Simple(OrQi2::Qi2)))),
+            .into_stmt_with_cond(IfCond::Unary(UnaryIfExpr::Simple(OrQi2::Qi2)))),
         lex::Lex::Ruo4 => {
             // if_statement                : '若' if_expression '者' statement+ ('或若' if_expression '者' statement+)* ('若非' statement+)? FOR_IF_END ;
             let ifexpr = parse_ifexpression_plus_zhe3(&mut iter)?;

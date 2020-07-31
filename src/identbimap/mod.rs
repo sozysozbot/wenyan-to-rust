@@ -180,7 +180,7 @@ impl IdentBiMap {
                 self.insert_data_or_qi2(&parse::OrQi2::from(what_to_fill), &conversion_table);
                 if let parse::OrQi2::NotQi2(ident) = what_to_fill {
                     let ascii = self.0.bimap_get_by_left(&ident).unwrap().clone();
-                    self.0.insert(ident.clone(), ascii.clone(), Some(Type::Mutable));
+                    self.0.insert(ident.clone(), ascii, Some(Type::Mutable));
                 }
                 self.insert_dats(&elems, &conversion_table);
             }
@@ -210,7 +210,7 @@ impl IdentBiMap {
             } => {
                 self.insert_ident(&ident, &conversion_table);
                 let ascii = self.0.bimap_get_by_left(&ident).unwrap().clone();
-                self.0.insert(ident.clone(), ascii.clone(), Some(Type::Mutable));
+                self.0.insert(ident.clone(), ascii, Some(Type::Mutable));
                 self.insert_rvalue(rvalue, &conversion_table)
             }
             Assignment {
@@ -219,7 +219,7 @@ impl IdentBiMap {
             } => {
                 self.insert_ident(&ident, &conversion_table);
                 let ascii = self.0.bimap_get_by_left(&ident).unwrap().clone();
-                self.0.insert(ident.clone(), ascii.clone(), Some(Type::Mutable));
+                self.0.insert(ident.clone(), ascii, Some(Type::Mutable));
                 self.insert_ident(&index, &conversion_table);
                 self.insert_rvalue(rvalue, &conversion_table)
             }
