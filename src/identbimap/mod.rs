@@ -1,6 +1,7 @@
 use crate::parse;
-use std::collections::HashMap;
+use big_s::S;
 use bimap_plus_map::BiMapPlusMap;
+use std::collections::HashMap;
 
 type Table = HashMap<String, String>;
 
@@ -9,7 +10,7 @@ fn to_pinyin(ident: parse::Identifier, conversion_table: &Table) -> String {
     let vec = i
         .chars()
         .map(|c| match conversion_table.get(&format!("{:X}", c as u32)) {
-            None => "_".to_string(),
+            None => S("_"),
             Some(a) => a.split(' ').collect::<Vec<_>>()[0].to_string(),
         })
         .collect::<Vec<_>>();
@@ -21,7 +22,7 @@ type Ascii = String;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
-    Mutable
+    Mutable,
 }
 
 pub struct IdentBiMap(BiMapPlusMap<Hanzi, Ascii, Option<Type>>);

@@ -50,6 +50,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "big_s"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "199edb7b90631283b10c2422e6a0bc8b7d987bf732995ba1de53b576c97e51a8"
+
+[[package]]
 name = "bimap"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -305,6 +311,7 @@ checksum = "f1bddf1187be692e79c5ffeab891132dfb0f236ed36a43c7ed39f1165ee20191"
 name = "wenyan-to-rust"
 version = "0.1.0"
 dependencies = [
+ "big_s",
  "bimap",
  "bimap_plus_map",
  "clap",

@@ -1,6 +1,7 @@
 use crate::identbimap;
 use crate::lex;
 use crate::parse;
+use big_s::S;
 
 type Line = (usize, String);
 
@@ -19,10 +20,10 @@ fn compile_optional_literal(
 ) -> String {
     match lit {
         None => match default_type {
-            lex::Type::Shu4 => "0.0".to_string(),
-            lex::Type::Lie4 => "vec![]".to_string(),
-            lex::Type::Yan2 => "\"\"".to_string(),
-            lex::Type::Yao2 => "false".to_string(),
+            lex::Type::Shu4 => S("0.0"),
+            lex::Type::Lie4 => S("vec![]"),
+            lex::Type::Yan2 => S("\"\""),
+            lex::Type::Yao2 => S("false"),
         },
         Some(v) => compile_literal(&env, v),
     }
@@ -30,8 +31,8 @@ fn compile_optional_literal(
 
 fn compile_literal(env: &Env, v: &parse::Data) -> String {
     match v.clone() {
-        parse::Data::BoolValue(true) => "true".to_string(),
-        parse::Data::BoolValue(false) => "false".to_string(),
+        parse::Data::BoolValue(true) => S("true"),
+        parse::Data::BoolValue(false) => S("false"),
         parse::Data::Identifier(ident) => env.ident_map.translate_from_hanzi(&ident),
         parse::Data::IntNum(intnum) => format!("{}.0", intnum),
         parse::Data::StringLiteral(strlit) => format!("\"{}\"", strlit), // FIXME properly escape
@@ -126,7 +127,7 @@ fn compile_forenum(mut env: &mut Env, num: i64, statements: &[parse::Statement])
         r.append(&mut compile_statement(&mut env, &st));
     }
     env.indent_level -= 1;
-    r.push((env.indent_level, "}".to_string()));
+    r.push((env.indent_level, S("}")));
     r
 }
 
@@ -136,7 +137,7 @@ fn compile_dataorqi2(env: &mut Env, a: &parse::OrQi2<parse::Data>) -> String {
             let qi = env
                 .variables_not_yet_named
                 .last()
-                .unwrap_or(&"f64::NAN".to_string())
+                .unwrap_or(&S("f64::NAN"))
                 .to_string();
 
             //《文言陰符》曰『言「其」者。取至近之魚而棄其餘。』
@@ -384,10 +385,10 @@ fn compile_if(
     }
 
     if !elsecase.is_empty() {
-        r.push((env.indent_level, "} else {".to_string()));
+        r.push((env.indent_level, S("} else {")));
         compile_indent(&mut env, &mut r, &elsecase)
     }
-    r.push((env.indent_level, "}".to_string()));
+    r.push((env.indent_level, S("}")));
     r
 }
 
@@ -416,8 +417,8 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
                     .join(", ")
             ),
         )],
-        parse::Statement::Continue => vec![(env.indent_level, "continue;".to_string())],
-        parse::Statement::Break => vec![(env.indent_level, "break;".to_string())],
+        parse::Statement::Continue => vec![(env.indent_level, S("continue;"))],
+        parse::Statement::Break => vec![(env.indent_level, S("break;"))],
         parse::Statement::ArrayFill {
             what_to_fill: parse::OrQi2::NotQi2(ident),
             elems,
@@ -540,7 +541,7 @@ fn compile_statement(mut env: &mut Env, st: &parse::Statement) -> Vec<Line> {
                 ),
             )];
             compile_indent(&mut env, &mut r, &stmts);
-            r.push((env.indent_level, "}".to_string()));
+            r.push((env.indent_level, S("}")));
             r
         }
         parse::Statement::Loop { statements } => compile_loop(&mut env, statements),
@@ -617,21 +618,21 @@ fn compile_forenum_ident(
     compile_indent(&mut env, &mut r, statements);
     r.append(&mut vec![
         (env.indent_level + 1, format!("_rand{} += 1.0;", rand_n,)),
-        (env.indent_level, "}".to_string()),
+        (env.indent_level, S("}")),
     ]);
     r
 }
 
 fn compile_loop(mut env: &mut Env, statements: &[parse::Statement]) -> Vec<Line> {
-    let mut r = vec![(env.indent_level, "loop {".to_string())];
+    let mut r = vec![(env.indent_level, S("loop {"))];
     compile_indent(&mut env, &mut r, statements);
-    r.push((env.indent_level, "}".to_string()));
+    r.push((env.indent_level, S("}")));
     r
 }
 
 use std::collections::HashMap;
 pub fn compile(parsed: &[parse::Statement], conversion_table: &HashMap<String, String>) -> String {
-    let mut ans = vec![(0, "fn main() {".to_string())];
+    let mut ans = vec![(0, S("fn main() {"))];
     let mut env = Env {
         ans_counter: 0,
         rand_counter: 0,
@@ -644,7 +645,7 @@ pub fn compile(parsed: &[parse::Statement], conversion_table: &HashMap<String, S
         ans.append(&mut compile_statement(&mut env, &st));
     }
 
-    ans.push((0, "}".to_string()));
+    ans.push((0, S("}")));
 
     ans.iter()
         .map(|(indent, src)| format!("{}{}\n", "    ".repeat(*indent), src))
